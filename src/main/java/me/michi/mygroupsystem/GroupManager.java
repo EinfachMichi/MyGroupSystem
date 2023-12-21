@@ -45,6 +45,15 @@ public class GroupManager {
         return false;
     }
 
+    public boolean contains(String groupName, UUID playerUUID){
+        for (Group group : groups){
+            if(group.getGroupName().equals(groupName)){
+                return group.containsGroupMember(playerUUID);
+            }
+        }
+        return false;
+    }
+
     /**
      * Show info from the given group -> list all players including their time left
      * @param commandSender sender

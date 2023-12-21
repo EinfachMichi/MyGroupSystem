@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 public class GroupCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
-        // If there is no argument, the command is invalid
+        // if there is no argument, the command is invalid
         if(args.length < 1){
             //TODO: replace from file
             commandSender.sendMessage("§cUnknown command. Use \"/group help\" for help.");
@@ -34,6 +34,11 @@ public class GroupCommand implements CommandExecutor {
         // if first argument is equal to "info" -> goTo info()
         if(args[0].equals("info")) {
             return info(commandSender, args);
+        }
+
+        // if first argument is equal to "remove" -> goTo remove()
+        if(args[0].equals("remove")){
+            return remove(commandSender, args);
         }
 
         //TODO: replace from file
@@ -75,9 +80,18 @@ public class GroupCommand implements CommandExecutor {
             // Try to get player
             Player playerToAdd = commandSender.getServer().getPlayer(playerName);
             if(playerToAdd != null){
+
+                // Check if player is already in that group
+                if(GroupManager.Instance.contains(groupName, playerToAdd.getUniqueId())){
+                    //TODO: replace from file
+                    commandSender.sendMessage("§6[" + playerName + "]§4 is already a member of §6[" + groupName + "].");
+                    return false;
+                }
+
                 // Remove player from its current group
                 GroupManager.Instance.removePlayerFromGroup(playerToAdd.getUniqueId());
 
+                // Get the time in seconds
                 long seconds = 0;
                 if(args.length == 4){
                     String inputTime = args[3];
@@ -142,6 +156,53 @@ public class GroupCommand implements CommandExecutor {
             }
         }
 
+        return false;
+    }
+
+    /*
+    REMOVE-COMMAND
+        - /group remove <playerName> <groupName>
+     */
+    private boolean remove(CommandSender commandSender, String[] args){
+        if(args.length == 3){
+            String playerName = args[1];
+            String groupName = args[2];
+
+            // Check if given group exists
+            if(GroupManager.Instance.contains(groupName)){
+
+                // Try to get player
+                Player playerToRemove = commandSender.getServer().getPlayer(playerName);
+                if(playerToRemove != null){
+
+                    // Check if player is in that group
+                    if(GroupManager.Instance.contains(groupName, playerToRemove.getUniqueId())){
+                        GroupManager.Instance.removePlayerFromGroup(playerToRemove.getUniqueId());
+                        //TODO: replace from file
+                        commandSender.sendMessage("§6[" + playerName + "]§4 successfully removed from group §6[" + groupName + "]§4.");
+                        return true;
+                    }
+                    else {
+                        //TODO: replace from file
+                        commandSender.sendMessage("§6[" + playerName + "]§4 doesn't exist in group §6[" + groupName + "]§4.");
+                        return false;
+                    }
+                }
+                else{
+                    //TODO: replace from file
+                    commandSender.sendMessage("§cPlayer not found.");
+                    return false;
+                }
+            }
+            else{
+                //TODO: replace from file
+                commandSender.sendMessage("§cThat group doesn't exist.");
+                return false;
+            }
+        }
+
+        //TODO: replace from file
+        commandSender.sendMessage("§cNot a valid command.");
         return false;
     }
 }
