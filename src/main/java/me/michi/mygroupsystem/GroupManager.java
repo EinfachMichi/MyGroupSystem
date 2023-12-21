@@ -2,7 +2,6 @@ package me.michi.mygroupsystem;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 
@@ -22,31 +21,31 @@ public class GroupManager {
         groups.add(new Group(name, prefix));
     }
 
-    public boolean contains(String name){
+    public boolean contains(String groupName){
         for (Group group : groups){
-            if(group.getName().equals(name)){
+            if(group.getGroupName().equals(groupName)){
                 return true;
             }
         }
         return false;
     }
 
-    public void listPlayerInGroup(CommandSender commandSender, String name){
+    public void listPlayerInGroup(CommandSender commandSender, String groupName){
         Group listGroup = null;
         for (Group group : groups){
-            if(group.getName().equals(name)){
+            if(group.getGroupName().equals(groupName)){
                 listGroup = group;
                 break;
             }
         }
 
         if(listGroup == null) {
-            commandSender.sendMessage("§cThere is no group with that name.");
+            commandSender.sendMessage("§cThat group doesn't exist.");
             return;
         }
 
-        String[] players = listGroup.getPlayerList();
-        commandSender.sendMessage("§2Group: " + name + " | " + "§2players (" + players.length + ")");
+        String[] players = listGroup.getGroupMemberList();
+        commandSender.sendMessage("§2Group: " + groupName + " | " + "§2players (" + players.length + ")\n");
 
         for (String player : players) {
             String output = "§a-" + player;
@@ -59,10 +58,51 @@ public class GroupManager {
         }
     }
 
-    public void addPlayerToGroup(String groupName, Player player){
+    public void showInfo(CommandSender commandSender, String groupName){
+        Group infoGroup = null;
         for (Group group : groups){
-            if(group.getName().equals(groupName)){
-                group.addPlayer(player);
+            if(group.getGroupName().equals(groupName)){
+                infoGroup = group;
+                break;
+            }
+        }
+
+        if(infoGroup == null){
+            commandSender.sendMessage("§cThat group doesn't exist.");
+            return;
+        }
+
+        String[] players = infoGroup.getGroupMemberInfos();
+        commandSender.sendMessage("§2Group: " + groupName + " | " + "§2players (" + players.length + ")\n");
+
+        for (String player : players) {
+            commandSender.sendMessage("§a-" + player);
+        }
+    }
+
+    public String getGroupName(Player player){
+        for (Group group : groups){
+            if(group.containsGroupMember(player)){
+                return group.getGroupName();
+            }
+        }
+        return "";
+    }
+
+    public boolean addPlayerToGroup(String groupName, Player player, long time){
+        for (Group group : groups){
+            if(group.getGroupName().equals(groupName)){
+                group.addGroupMember(player, time);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void removePlayerFromGroup(Player player) {
+        for (Group group : groups) {
+            if (group.containsGroupMember(player)) {
+                group.removeGroupMember(player);
                 break;
             }
         }
