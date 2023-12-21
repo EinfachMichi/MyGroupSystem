@@ -1,22 +1,36 @@
 package me.michi.mygroupsystem;
 
-public class GroupMember {
-    private String name;
-    private long seconds;
+import org.bukkit.entity.Player;
 
-    public GroupMember(String name){
-        this.name = name;
+import java.util.Date;
+import java.util.UUID;
+
+public class GroupMember {
+    private UUID playerUUID;
+    private String name;
+    private Date expirationTime;
+
+    public GroupMember(Player player){
+        this.name = player.getDisplayName();
+        this.playerUUID = player.getUniqueId();
     }
 
     public String getName(){
         return name;
     }
 
-    public long getSeconds(){
-        return seconds;
+    public UUID getPlayerUUID(){
+        return playerUUID;
     }
 
-    public void setSeconds(long seconds){
-        this.seconds = seconds;
+    public long getRemainingSeconds(){
+        long currentTime = System.currentTimeMillis();
+        long remainingTime = expirationTime.getTime() - currentTime;
+
+        return Math.max(remainingTime / 1000, 0);
+    }
+
+    public void setTime(long seconds){
+        this.expirationTime = new Date(System.currentTimeMillis() + seconds * 1000);
     }
 }

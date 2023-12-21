@@ -9,27 +9,34 @@ import org.bukkit.entity.Player;
 public class GroupCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
+        // If there is no argument, the command is invalid
         if(args.length < 1){
+            //TODO: replace from file
             commandSender.sendMessage("§cUnknown command. Use \"/group help\" for help.");
             return false;
         }
 
+        // if first argument is equal to "create" -> goTo create()
         if(args[0].equals("create")){
             if(args.length >= 2){
                 return create(commandSender, args);
             }
         }
 
+        // if first argument is equal to "add" AND there are more or equal 3 arguments -> goTo add()
+        // ["add" requires a minimum of 3 arguments] -> 1 = add | 2 = <player> | 3 = <groupName>
         if(args[0].equals("add")) {
             if(args.length >= 3){
                 return add(commandSender, args);
             }
         }
 
+        // if first argument is equal to "info" -> goTo info()
         if(args[0].equals("info")) {
             return info(commandSender, args);
         }
 
+        //TODO: replace from file
         commandSender.sendMessage("§cUnknown command. Use \"/group help\" for help.");
         return false;
     }
@@ -48,13 +55,14 @@ public class GroupCommand implements CommandExecutor {
         }
 
         GroupManager.Instance.createGroup(name, prefix);
+        //TODO: replace from file
         commandSender.sendMessage("§aThe Group §6[" + args[1] + "]§a was successfully created!");
         return true;
     }
 
     /*
     ADD-COMMAND:
-        - /group add <player> <groupName> (PERMANENT)
+        - /group add <player> <groupName> (PERM)
         - /group add <player> <groupName> <seconds> (TEMP)
      */
     private boolean add(CommandSender commandSender, String[] args){
@@ -68,7 +76,7 @@ public class GroupCommand implements CommandExecutor {
             Player playerToAdd = commandSender.getServer().getPlayer(playerName);
             if(playerToAdd != null){
                 // Remove player from its current group
-                GroupManager.Instance.removePlayerFromGroup(playerToAdd);
+                GroupManager.Instance.removePlayerFromGroup(playerToAdd.getUniqueId());
 
                 long seconds = 0;
                 if(args.length == 4){
@@ -76,6 +84,7 @@ public class GroupCommand implements CommandExecutor {
                     try {
                         seconds = Long.parseLong(inputTime);
                     } catch (Exception e){
+                        //TODO: replace from file
                         commandSender.sendMessage("§cSomething went wrong.");
                         return false;
                     }
@@ -83,15 +92,19 @@ public class GroupCommand implements CommandExecutor {
 
                 // Add player to the new group
                 if(GroupManager.Instance.addPlayerToGroup(groupName, playerToAdd, seconds)){
+                    //TODO: replace from file
                     commandSender.sendMessage("§6[" + playerName + "]§a successfully added to §6[" + groupName + "]§a!");
                     return true;
                 }
+                //TODO: replace from file
                 commandSender.sendMessage("§cSomething went wrong.");
                 return false;
             }
+            //TODO: replace from file
             commandSender.sendMessage("§cCouldn't find player.");
         }
         else{
+            //TODO: replace from file
             commandSender.sendMessage("§cThat group doesn't exist.");
         }
         return false;
@@ -99,29 +112,32 @@ public class GroupCommand implements CommandExecutor {
 
     /*
     INFO-COMMAND
-        - /group info
         - /group info <groupName>
+        - /group info
      */
     private boolean info(CommandSender commandSender, String[] args){
         if(args.length >= 2){
             String groupName = args[1];
             if(GroupManager.Instance.contains(groupName)){
-                GroupManager.Instance.listPlayerInGroup(commandSender, groupName);
+                GroupManager.Instance.showInfo(commandSender, groupName);
                 return true;
             }
             else{
+                //TODO: replace from file
                 commandSender.sendMessage("§cThat isn't in a group yet.");
                 return false;
             }
         }
 
         if(commandSender instanceof Player player){
-            String groupName = GroupManager.Instance.getGroupName(player);
+            // Get the group name of the player -> if it's in no group, print error
+            String groupName = GroupManager.Instance.getGroupName(player.getUniqueId());
             if(!groupName.isEmpty()){
                 GroupManager.Instance.showInfo(commandSender, groupName);
                 return true;
             }
             else{
+                //TODO: replace from file
                 commandSender.sendMessage("§cYou aren't in a group yet.");
             }
         }

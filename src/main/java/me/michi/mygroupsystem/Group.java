@@ -2,9 +2,7 @@ package me.michi.mygroupsystem;
 
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class Group {
     private String name;
@@ -17,46 +15,72 @@ public class Group {
         groupMembers = new HashMap<>();
     }
 
+    /**
+     * @return the group prefix
+     */
     public String getGroupPrefix(){
         return "[" + prefix + "]";
     }
 
+    /**
+     * @return the group name
+     */
     public String getGroupName(){
         return name;
     }
 
-    public void addGroupMember(Player player, long seconds){
-        //TODO: add timer
-
-        GroupMember newMember = new GroupMember(player.getDisplayName());
-        newMember.setSeconds(seconds);
+    /**
+     * Add the given player to the group AS a group member for seconds
+     * @param player player
+     * @param seconds seconds
+     * @return new member
+     */
+    public GroupMember addGroupMember(Player player, long seconds){
+        GroupMember newMember = new GroupMember(player);
+        newMember.setTime(seconds);
         groupMembers.put(player.getUniqueId(), newMember);
+        return newMember;
     }
 
-    public void removeGroupMember(Player player){
-        groupMembers.remove(player.getUniqueId());
+    /**
+     * Removes the given group member from the group
+     * @param playerUUID player
+     */
+    public void removeGroupMember(UUID playerUUID){
+        groupMembers.remove(playerUUID);
     }
 
-    public String[] getGroupMemberList(){
-        return groupMembers.values().toArray(new String[0]);
+    /**
+     * @param playerUUID playerUUID
+     * @return true if player is part of the group
+     */
+    public boolean containsGroupMember(UUID playerUUID){
+        return groupMembers.containsKey(playerUUID);
     }
 
-    public boolean containsGroupMember(Player player){
-        return groupMembers.containsKey(player.getUniqueId());
-    }
+    /**
+     * @return a String[] with all infos about the group members in this group
+     */
+    public List<String> getGroupMemberInfos() {
+        List<String> infos = new ArrayList<>();
 
-    public String[] getGroupMemberInfos(){
-        GroupMember[] groupMemberInfos = groupMembers.values().toArray(new GroupMember[0]);
-        String[] infos = new String[groupMemberInfos.length];
-        for (int i = 0; i < groupMemberInfos.length; i++) {
-            infos[i] = "§a- " + groupMemberInfos[i].getName();
-            if(groupMemberInfos[i].getSeconds() > 0){
-                infos[i] += " (" + getTimeString(groupMemberInfos[i].getSeconds()) + ")";
+        for (GroupMember groupMember : groupMembers.values()) {
+            StringBuilder infoBuilder = new StringBuilder("§a-- ").append(groupMember.getName());
+
+            if (groupMember.getRemainingSeconds() > 0) {
+                infoBuilder.append(" (").append(getTimeString(groupMember.getRemainingSeconds())).append(")");
             }
+
+            infos.add(infoBuilder.toString());
         }
+
         return infos;
     }
 
+    /**
+     * @param seconds seconds
+     * @return format(day, hours, minutes, seconds)
+     */
     private String getTimeString(long seconds){
         if (seconds < 0) {
             return "";
