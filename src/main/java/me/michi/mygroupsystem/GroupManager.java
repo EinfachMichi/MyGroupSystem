@@ -45,6 +45,11 @@ public class GroupManager {
         return false;
     }
 
+    /**
+     * Check if the player exists in the given group
+     * @param groupName group name
+     * @return true if there is a group with the given group name
+     */
     public boolean contains(String groupName, UUID playerUUID){
         for (Group group : groups){
             if(group.getGroupName().equals(groupName)){
@@ -129,6 +134,9 @@ public class GroupManager {
         }
     }
 
+    /**
+     * Starts the expiration timer
+     */
     public void startExpirationTimer(){
         expirationTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -138,6 +146,10 @@ public class GroupManager {
         }, 0, INTERVAL);
     }
 
+    /**
+     * Assign the given group member to the expiration time
+     * @param member member
+     */
     private void assignGroupMemberWithExpirationTime(GroupMember member){
         if(member.getRemainingSeconds() > 0){
             System.out.println(member.getRemainingSeconds());
@@ -145,6 +157,7 @@ public class GroupManager {
             expirationTimes.put(member, expirationTime);
         }
     }
+
 
     private Date calculateExpirationTime(long seconds){
         long currentTime = System.currentTimeMillis();

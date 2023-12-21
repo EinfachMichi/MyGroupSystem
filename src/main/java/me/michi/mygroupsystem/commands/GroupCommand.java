@@ -84,7 +84,7 @@ public class GroupCommand implements CommandExecutor {
                 // Check if player is already in that group
                 if(GroupManager.Instance.contains(groupName, playerToAdd.getUniqueId())){
                     //TODO: replace from file
-                    commandSender.sendMessage("§6[" + playerName + "]§4 is already a member of §6[" + groupName + "].");
+                    commandSender.sendMessage("§6[" + playerName + "]§c is already a member of §6[" + groupName + "]§c.");
                     return false;
                 }
 
@@ -179,12 +179,12 @@ public class GroupCommand implements CommandExecutor {
                     if(GroupManager.Instance.contains(groupName, playerToRemove.getUniqueId())){
                         GroupManager.Instance.removePlayerFromGroup(playerToRemove.getUniqueId());
                         //TODO: replace from file
-                        commandSender.sendMessage("§6[" + playerName + "]§4 successfully removed from group §6[" + groupName + "]§4.");
+                        commandSender.sendMessage("§6[" + playerName + "]§a successfully removed from group §6[" + groupName + "]§a.");
                         return true;
                     }
                     else {
                         //TODO: replace from file
-                        commandSender.sendMessage("§6[" + playerName + "]§4 doesn't exist in group §6[" + groupName + "]§4.");
+                        commandSender.sendMessage("§6[" + playerName + "]§c doesn't exist in group §6[" + groupName + "]§c.");
                         return false;
                     }
                 }
