@@ -2,3 +2,6 @@ name: MyGroupSystem
 version: '${version}'
 main: me.michi.mygroupsystem.Main
 api-version: '1.20'
+commands:
+  group:
+    usage: /group
