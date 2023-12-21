@@ -1,5 +1,7 @@
 package me.michi.mygroupsystem.commands;
 
+import me.michi.mygroupsystem.GroupEventLogType;
+import me.michi.mygroupsystem.GroupEventLogger;
 import me.michi.mygroupsystem.GroupManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -11,8 +13,7 @@ public class GroupCommand implements CommandExecutor {
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
         // if there is no argument, the command is invalid
         if(args.length < 1){
-            //TODO: replace from file
-            commandSender.sendMessage("§cUnknown command. Use \"/group help\" for help.");
+            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
             return false;
         }
 
@@ -41,8 +42,11 @@ public class GroupCommand implements CommandExecutor {
             return remove(commandSender, args);
         }
 
-        //TODO: replace from file
-        commandSender.sendMessage("§cUnknown command. Use \"/group help\" for help.");
+        if(args[0].equals("list")){
+            return list(commandSender);
+        }
+
+        GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
         return false;
     }
 
@@ -60,8 +64,7 @@ public class GroupCommand implements CommandExecutor {
         }
 
         GroupManager.Instance.createGroup(name, prefix);
-        //TODO: replace from file
-        commandSender.sendMessage("§aThe Group §6[" + args[1] + "]§a was successfully created!");
+        GroupEventLogger.Log(commandSender, GroupEventLogType.success_create);
         return true;
     }
 
@@ -83,8 +86,7 @@ public class GroupCommand implements CommandExecutor {
 
                 // Check if player is already in that group
                 if(GroupManager.Instance.contains(groupName, playerToAdd.getUniqueId())){
-                    //TODO: replace from file
-                    commandSender.sendMessage("§6[" + playerName + "]§c is already a member of §6[" + groupName + "]§c.");
+                    GroupEventLogger.Log(commandSender, GroupEventLogType.failed_add_already_member);
                     return false;
                 }
 
@@ -98,28 +100,23 @@ public class GroupCommand implements CommandExecutor {
                     try {
                         seconds = Long.parseLong(inputTime);
                     } catch (Exception e){
-                        //TODO: replace from file
-                        commandSender.sendMessage("§cSomething went wrong.");
+                        GroupEventLogger.Log(commandSender, GroupEventLogType.failed_parse);
                         return false;
                     }
                 }
 
                 // Add player to the new group
                 if(GroupManager.Instance.addPlayerToGroup(groupName, playerToAdd, seconds)){
-                    //TODO: replace from file
-                    commandSender.sendMessage("§6[" + playerName + "]§a successfully added to §6[" + groupName + "]§a!");
+                    GroupEventLogger.Log(commandSender, GroupEventLogType.success_add);
                     return true;
                 }
-                //TODO: replace from file
-                commandSender.sendMessage("§cSomething went wrong.");
+                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_add_player);
                 return false;
             }
-            //TODO: replace from file
-            commandSender.sendMessage("§cCouldn't find player.");
+            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_not_found);
         }
         else{
-            //TODO: replace from file
-            commandSender.sendMessage("§cThat group doesn't exist.");
+            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
         }
         return false;
     }
@@ -137,8 +134,7 @@ public class GroupCommand implements CommandExecutor {
                 return true;
             }
             else{
-                //TODO: replace from file
-                commandSender.sendMessage("§cThat isn't in a group yet.");
+                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
                 return false;
             }
         }
@@ -151,8 +147,7 @@ public class GroupCommand implements CommandExecutor {
                 return true;
             }
             else{
-                //TODO: replace from file
-                commandSender.sendMessage("§cYou aren't in a group yet.");
+                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_no_group);
             }
         }
 
@@ -161,48 +156,53 @@ public class GroupCommand implements CommandExecutor {
 
     /*
     REMOVE-COMMAND
-        - /group remove <playerName> <groupName>
+        - /group remove <playerName> <seconds>
      */
     private boolean remove(CommandSender commandSender, String[] args){
-        if(args.length == 3){
-            String playerName = args[1];
-            String groupName = args[2];
+        String playerName = args[1];;
 
-            // Check if given group exists
-            if(GroupManager.Instance.contains(groupName)){
+        // Try to get player
+        Player playerToRemove = commandSender.getServer().getPlayer(playerName);
+        if(playerToRemove != null){
 
-                // Try to get player
-                Player playerToRemove = commandSender.getServer().getPlayer(playerName);
-                if(playerToRemove != null){
+            // if time is given
+            if(args.length == 3) {
 
-                    // Check if player is in that group
-                    if(GroupManager.Instance.contains(groupName, playerToRemove.getUniqueId())){
-                        GroupManager.Instance.removePlayerFromGroup(playerToRemove.getUniqueId());
-                        //TODO: replace from file
-                        commandSender.sendMessage("§6[" + playerName + "]§a successfully removed from group §6[" + groupName + "]§a.");
-                        return true;
-                    }
-                    else {
-                        //TODO: replace from file
-                        commandSender.sendMessage("§6[" + playerName + "]§c doesn't exist in group §6[" + groupName + "]§c.");
-                        return false;
-                    }
-                }
-                else{
-                    //TODO: replace from file
-                    commandSender.sendMessage("§cPlayer not found.");
+                // Get the time in seconds
+                long seconds = 0;
+                String inputTime = args[2];
+                try {
+                    seconds = Long.parseLong(inputTime);
+                } catch (Exception e){
+                    GroupEventLogger.Log(commandSender, GroupEventLogType.failed_parse);
                     return false;
                 }
+
+                GroupManager.Instance.removePlayerFromGroupAfter(playerToRemove.getUniqueId(), seconds);
+                return true;
             }
-            else{
-                //TODO: replace from file
-                commandSender.sendMessage("§cThat group doesn't exist.");
+            else if(args.length > 3){
+                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
                 return false;
             }
-        }
 
-        //TODO: replace from file
-        commandSender.sendMessage("§cNot a valid command.");
-        return false;
+            GroupManager.Instance.removePlayerFromGroup(playerToRemove.getUniqueId());
+            GroupEventLogger.Log(commandSender, GroupEventLogType.success_remove);
+            return true;
+        }
+        else{
+            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_not_found);
+            return false;
+        }
+    }
+
+    /*
+    LIST-COMMAND
+        - /group list
+     */
+    private boolean list(CommandSender commandSender){
+        // This command will succeed everytime
+        GroupManager.Instance.listGroups(commandSender);
+        return true;
     }
 }

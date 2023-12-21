@@ -30,6 +30,20 @@ public class Group {
     }
 
     /**
+     * @return the group member
+     */
+    public GroupMember getGroupMember(UUID playerUUID){
+        return groupMembers.get(playerUUID);
+    }
+
+    /**
+     * @return player count in that group
+     */
+    public int getSize(){
+        return groupMembers.size();
+    }
+
+    /**
      * Add the given player to the group AS a group member for seconds
      * @param player player
      * @param seconds seconds

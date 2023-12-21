@@ -1,0 +1,41 @@
+# color codes
+# failed = §c
+# success = §a
+# time = §f
+
+logs:
+  - type: failed_invalid
+    message: "§cUnknown command. Use \"/group help\" for help."
+
+  - type: failed_parse
+    message: "§cUnknown command. Use \"/group help\" for help."
+
+  - type: failed_player_not_found
+    message: "§cPlayer not found."
+
+  - type: failed_group_not_found
+    message: "§cGroup not found."
+
+  - type: failed_player_not_in_group
+    message: "§cThis player belongs to a different group."
+
+  - type: failed_add_already_member
+    message: "§cThis player is already member of this group."
+
+  - type: failed_add_player
+    message: "§cFailed to add player."
+
+  - type: failed_player_no_group
+    message: "§cPlayer has no group."
+
+  - type: success_create
+    message: "§aGroup successfully created."
+
+  - type: success_add
+    message: "§aSuccessfully added player to the group."
+
+  - type: success_remove
+    message: "§aSuccessfully removed player from the group."
+
+  - type: time_expired
+    message: "§fYour time expired. You were removed from the group."

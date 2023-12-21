@@ -1,5 +1,6 @@
 package me.michi.mygroupsystem;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -20,6 +21,15 @@ public class GroupManager {
             groups = new ArrayList<>();
             startExpirationTimer();
         }
+    }
+
+    public GroupMember getGroupMember(UUID playerUUID){
+        for (Group group : groups){
+            if (group.getGroupName().equals(getGroupName(playerUUID))){
+                return group.getGroupMember(playerUUID);
+            }
+        }
+        return null;
     }
 
     /**
@@ -74,18 +84,31 @@ public class GroupManager {
         }
 
         if(infoGroup == null){
-            //TODO: replace from file
-            commandSender.sendMessage("§cThat group doesn't exist.");
+            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
             return;
         }
 
         String[] players = infoGroup.getGroupMemberInfos().toArray(new String[0]);
-        //TODO: replace from file
-        commandSender.sendMessage("§2Group: " + groupName + " | " + "§2players (" + players.length + ")\n");
-
+        commandSender.sendMessage("§2Group: §6" + groupName + " §2| §8players (" + players.length + ")\n");
         for (String player : players) {
-            //TODO: replace from file
             commandSender.sendMessage(player);
+        }
+    }
+
+    /**
+     * Lists all groups including the player count
+     * @param commandSender sender
+     */
+    public void listGroups(CommandSender commandSender){
+        //TODO: sort ascending
+        if(groups.isEmpty()){
+            commandSender.sendMessage("§fNo groups found.");
+            return;
+        }
+
+        commandSender.sendMessage("§2\nAll groups listed:");
+        for (Group group : groups){
+            commandSender.sendMessage("§a-- §6" + group.getGroupName() + " §a| §8players (" + group.getSize() + ")");
         }
     }
 
@@ -135,6 +158,16 @@ public class GroupManager {
     }
 
     /**
+     * Removes the player from its current group after specified seconds
+     * @param playerUUID playerUUID
+     */
+    public void removePlayerFromGroupAfter(UUID playerUUID, long seconds) {
+        GroupMember groupMember = GroupManager.Instance.getGroupMember(playerUUID);
+        groupMember.setTime(seconds);
+        assignGroupMemberWithExpirationTime(groupMember);
+    }
+
+    /**
      * Starts the expiration timer
      */
     public void startExpirationTimer(){
@@ -152,7 +185,6 @@ public class GroupManager {
      */
     private void assignGroupMemberWithExpirationTime(GroupMember member){
         if(member.getRemainingSeconds() > 0){
-            System.out.println(member.getRemainingSeconds());
             Date expirationTime = calculateExpirationTime(member.getRemainingSeconds());
             expirationTimes.put(member, expirationTime);
         }
@@ -173,7 +205,7 @@ public class GroupManager {
 
             // if the time is expired, kick the player out of the group
             if(currentTime.after(expirationTime)){
-                //TODO: send message after being kicked
+                GroupEventLogger.Log(Bukkit.getPlayer(groupMember.getPlayerUUID()), GroupEventLogType.time_expired);
                 removePlayerFromGroup(groupMember.getPlayerUUID());
                 expirationTimes.remove(groupMember);
             }

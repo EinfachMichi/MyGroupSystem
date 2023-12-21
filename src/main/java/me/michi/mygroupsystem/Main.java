@@ -17,6 +17,7 @@ public final class Main extends JavaPlugin {
     }
 
     private void initSingletons(){
+        new GroupEventLogger(this);
         new GroupManager();
     }
 
