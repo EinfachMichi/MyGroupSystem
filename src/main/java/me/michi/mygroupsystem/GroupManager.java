@@ -1,9 +1,5 @@
 package me.michi.mygroupsystem;
 
-import org.bukkit.Bukkit;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-
 import java.util.*;
 
 public class GroupManager {
@@ -13,40 +9,85 @@ public class GroupManager {
     private Timer expirationTimer = new Timer(true);
     private Map<GroupMember, Date> expirationTimes = new HashMap<>();
 
-    private ArrayList<Group> groups;
+    private ArrayList<Group> groups = new ArrayList<>();;
 
     public GroupManager(){
         if(Instance == null){
             Instance = this;
-            groups = new ArrayList<>();
             startExpirationTimer();
         }
     }
 
-    public GroupMember getGroupMember(UUID playerUUID){
+    /**
+     *  Creates a new group with the given name and prefix
+     * @param name
+     * @param prefix
+     * @return null if group already exists
+     */
+    public Group createGroup(String name, String prefix){
+        if(groupExist(name)){
+            return null;
+        }
+
+        Group newGroup = new Group(name, prefix);
+        groups.add(newGroup);
+        return newGroup;
+    }
+
+    /**
+     * Add given player to given group for a specific time -> where 0 seconds is permanently
+     * @param groupName
+     * @param playerUUID
+     * @param time in seconds
+     * @return group member that is getting created
+     */
+    public GroupMember addPlayerToGroup(String groupName, UUID playerUUID, long time){
         for (Group group : groups){
-            if (group.getGroupName().equals(getGroupName(playerUUID))){
-                return group.getGroupMember(playerUUID);
+            if(group.getGroupName().equals(groupName)){
+                GroupMember newMember = group.addGroupMember(playerUUID, time);
+                assignGroupMemberWithExpirationTime(newMember);
+                return newMember;
             }
         }
         return null;
     }
 
     /**
-     *  Creates a new group with the given name and prefix
-     * @param name group name
-     * @param prefix group prefix
+     * Removes the player instantly from its current group
+     * @param playerUUID
      */
-    public void createGroup(String name, String prefix){
-        groups.add(new Group(name, prefix));
+    public boolean removePlayerFromGroup(UUID playerUUID) {
+        for (Group group : groups) {
+            if (group.containsGroupMember(playerUUID)) {
+                expirationTimes.remove(getGroupMember(playerUUID));
+                group.removeGroupMember(playerUUID);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Starts countdown for player to get removed from its group
+     * @param playerUUID
+     */
+    public boolean removePlayerFromGroup(UUID playerUUID, long seconds) {
+        if(seconds < 1){
+            return removePlayerFromGroup(playerUUID);
+        }
+
+        GroupMember groupMember = GroupManager.Instance.getGroupMember(playerUUID);
+        groupMember.setTime(seconds);
+        assignGroupMemberWithExpirationTime(groupMember);
+        return true;
     }
 
     /**
      * Check if the group exists
-     * @param groupName group name
-     * @return true if there is a group with the given group name
+     * @param groupName
+     * @return false if group doesn't exist
      */
-    public boolean contains(String groupName){
+    public boolean groupExist(String groupName){
         for (Group group : groups){
             if(group.getGroupName().equals(groupName)){
                 return true;
@@ -57,10 +98,10 @@ public class GroupManager {
 
     /**
      * Check if the player exists in the given group
-     * @param groupName group name
-     * @return true if there is a group with the given group name
+     * @param groupName
+     * @return false if given player is not in given group
      */
-    public boolean contains(String groupName, UUID playerUUID){
+    public boolean playerInGroup(String groupName, UUID playerUUID){
         for (Group group : groups){
             if(group.getGroupName().equals(groupName)){
                 return group.containsGroupMember(playerUUID);
@@ -70,74 +111,13 @@ public class GroupManager {
     }
 
     /**
-     * Show info from the given group -> list all players including their time left
-     * @param commandSender sender
-     * @param groupName group name
+     * Check if the player has a group
+     * @param playerUUID
+     * @return false if given player is not in a group
      */
-    public void showInfo(CommandSender commandSender, String groupName){
-        Group infoGroup = null;
-        for (Group group : groups){
-            if(group.getGroupName().equals(groupName)){
-                infoGroup = group;
-                break;
-            }
-        }
-
-        if(infoGroup == null){
-            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
-            return;
-        }
-
-        String[] players = infoGroup.getGroupMemberInfos().toArray(new String[0]);
-        commandSender.sendMessage("§2Group: §6" + groupName + " §2| §8players (" + players.length + ")\n");
-        for (String player : players) {
-            commandSender.sendMessage(player);
-        }
-    }
-
-    /**
-     * Lists all groups including the player count
-     * @param commandSender sender
-     */
-    public void listGroups(CommandSender commandSender){
-        //TODO: sort ascending
-        if(groups.isEmpty()){
-            commandSender.sendMessage("§fNo groups found.");
-            return;
-        }
-
-        commandSender.sendMessage("§2\nAll groups listed:");
-        for (Group group : groups){
-            commandSender.sendMessage("§a-- §6" + group.getGroupName() + " §a| §8players (" + group.getSize() + ")");
-        }
-    }
-
-    /**
-     * Returns the group name from the group from the player
-     * @param playerUUID playerUUID
-     * @return group name
-     */
-    public String getGroupName(UUID playerUUID){
+    public boolean playerHasGroup(UUID playerUUID){
         for (Group group : groups){
             if(group.containsGroupMember(playerUUID)){
-                return group.getGroupName();
-            }
-        }
-        return "";
-    }
-
-    /**
-     * Add given player to given group for time seconds
-     * @param groupName group name
-     * @param player player
-     * @param time time in seconds
-     * @return true if the player successfully was added to the group
-     */
-    public boolean addPlayerToGroup(String groupName, Player player, long time){
-        for (Group group : groups){
-            if(group.getGroupName().equals(groupName)){
-                GroupMember newMember = group.addGroupMember(player, time);
-                assignGroupMemberWithExpirationTime(newMember);
                 return true;
             }
         }
@@ -145,32 +125,34 @@ public class GroupManager {
     }
 
     /**
-     * Removes the player from its current group
+     * Return the group member object of the player
      * @param playerUUID playerUUID
+     * @return group name
      */
-    public void removePlayerFromGroup(UUID playerUUID) {
-        for (Group group : groups) {
-            if (group.containsGroupMember(playerUUID)) {
-                group.removeGroupMember(playerUUID);
-                break;
+    public GroupMember getGroupMember(UUID playerUUID){
+        for (Group group : groups){
+            if(group.containsGroupMember(playerUUID)){
+                return group.getGroupMember(playerUUID);
             }
         }
+        return null;
     }
 
     /**
-     * Removes the player from its current group after specified seconds
+     * Returns the group that the player is in
      * @param playerUUID playerUUID
+     * @return null if player has no group
      */
-    public void removePlayerFromGroupAfter(UUID playerUUID, long seconds) {
-        GroupMember groupMember = GroupManager.Instance.getGroupMember(playerUUID);
-        groupMember.setTime(seconds);
-        assignGroupMemberWithExpirationTime(groupMember);
+    public Group getGroup(UUID playerUUID){
+        for (Group group : groups){
+            if(group.containsGroupMember(playerUUID)){
+                return group;
+            }
+        }
+        return null;
     }
 
-    /**
-     * Starts the expiration timer
-     */
-    public void startExpirationTimer(){
+    private void startExpirationTimer(){
         expirationTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -179,17 +161,12 @@ public class GroupManager {
         }, 0, INTERVAL);
     }
 
-    /**
-     * Assign the given group member to the expiration time
-     * @param member member
-     */
     private void assignGroupMemberWithExpirationTime(GroupMember member){
         if(member.getRemainingSeconds() > 0){
             Date expirationTime = calculateExpirationTime(member.getRemainingSeconds());
             expirationTimes.put(member, expirationTime);
         }
     }
-
 
     private Date calculateExpirationTime(long seconds){
         long currentTime = System.currentTimeMillis();
@@ -205,7 +182,7 @@ public class GroupManager {
 
             // if the time is expired, kick the player out of the group
             if(currentTime.after(expirationTime)){
-                GroupEventLogger.Log(Bukkit.getPlayer(groupMember.getPlayerUUID()), GroupEventLogType.time_expired);
+                // TODO: implement logic for if the player is not on the server
                 removePlayerFromGroup(groupMember.getPlayerUUID());
                 expirationTimes.remove(groupMember);
             }

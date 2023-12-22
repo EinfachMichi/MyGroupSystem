@@ -1,208 +1,258 @@
 package me.michi.mygroupsystem.commands;
 
-import me.michi.mygroupsystem.GroupEventLogType;
-import me.michi.mygroupsystem.GroupEventLogger;
+import me.michi.mygroupsystem.logs.GroupSystemLogType;
+import me.michi.mygroupsystem.logs.GroupSystemLogger;
 import me.michi.mygroupsystem.GroupManager;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Arrays;
+
 public class GroupCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
-        // if there is no argument, the command is invalid
+        // the command is invalid if there is no argument given
         if(args.length < 1){
-            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
-            return false;
-        }
-
-        // if first argument is equal to "create" -> goTo create()
-        if(args[0].equals("create")){
-            if(args.length >= 2){
-                return create(commandSender, args);
-            }
-        }
-
-        // if first argument is equal to "add" AND there are more or equal 3 arguments -> goTo add()
-        // ["add" requires a minimum of 3 arguments] -> 1 = add | 2 = <player> | 3 = <groupName>
-        if(args[0].equals("add")) {
-            if(args.length >= 3){
-                return add(commandSender, args);
-            }
-        }
-
-        // if first argument is equal to "info" -> goTo info()
-        if(args[0].equals("info")) {
-            return info(commandSender, args);
-        }
-
-        // if first argument is equal to "remove" -> goTo remove()
-        if(args[0].equals("remove")){
-            return remove(commandSender, args);
-        }
-
-        if(args[0].equals("list")){
-            return list(commandSender);
-        }
-
-        GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
-        return false;
-    }
-
-    /*
-    CREATE-COMMAND:
-        - /group create <groupName>
-     */
-    private boolean create(CommandSender commandSender, String[] args){
-        String name = args[1];
-        String prefix = name;
-
-        // Set prefix if given
-        if(args.length == 3){
-            prefix = args[2];
-        }
-
-        GroupManager.Instance.createGroup(name, prefix);
-        GroupEventLogger.Log(commandSender, GroupEventLogType.success_create);
-        return true;
-    }
-
-    /*
-    ADD-COMMAND:
-        - /group add <player> <groupName> (PERM)
-        - /group add <player> <groupName> <seconds> (TEMP)
-     */
-    private boolean add(CommandSender commandSender, String[] args){
-        String playerName = args[1];
-        String groupName = args[2];
-
-        // Check if given group exists
-        if(GroupManager.Instance.contains(groupName)){
-
-            // Try to get player
-            Player playerToAdd = commandSender.getServer().getPlayer(playerName);
-            if(playerToAdd != null){
-
-                // Check if player is already in that group
-                if(GroupManager.Instance.contains(groupName, playerToAdd.getUniqueId())){
-                    GroupEventLogger.Log(commandSender, GroupEventLogType.failed_add_already_member);
-                    return false;
-                }
-
-                // Remove player from its current group
-                GroupManager.Instance.removePlayerFromGroup(playerToAdd.getUniqueId());
-
-                // Get the time in seconds
-                long seconds = 0;
-                if(args.length == 4){
-                    String inputTime = args[3];
-                    try {
-                        seconds = Long.parseLong(inputTime);
-                    } catch (Exception e){
-                        GroupEventLogger.Log(commandSender, GroupEventLogType.failed_parse);
-                        return false;
-                    }
-                }
-
-                // Add player to the new group
-                if(GroupManager.Instance.addPlayerToGroup(groupName, playerToAdd, seconds)){
-                    GroupEventLogger.Log(commandSender, GroupEventLogType.success_add);
-                    return true;
-                }
-                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_add_player);
-                return false;
-            }
-            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_not_found);
-        }
-        else{
-            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
-        }
-        return false;
-    }
-
-    /*
-    INFO-COMMAND
-        - /group info <groupName>
-        - /group info
-     */
-    private boolean info(CommandSender commandSender, String[] args){
-        if(args.length >= 2){
-            String groupName = args[1];
-            if(GroupManager.Instance.contains(groupName)){
-                GroupManager.Instance.showInfo(commandSender, groupName);
-                return true;
-            }
-            else{
-                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_group_not_found);
-                return false;
-            }
-        }
-
-        if(commandSender instanceof Player player){
-            // Get the group name of the player -> if it's in no group, print error
-            String groupName = GroupManager.Instance.getGroupName(player.getUniqueId());
-            if(!groupName.isEmpty()){
-                GroupManager.Instance.showInfo(commandSender, groupName);
-                return true;
-            }
-            else{
-                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_no_group);
-            }
-        }
-
-        return false;
-    }
-
-    /*
-    REMOVE-COMMAND
-        - /group remove <playerName> <seconds>
-     */
-    private boolean remove(CommandSender commandSender, String[] args){
-        String playerName = args[1];;
-
-        // Try to get player
-        Player playerToRemove = commandSender.getServer().getPlayer(playerName);
-        if(playerToRemove != null){
-
-            // if time is given
-            if(args.length == 3) {
-
-                // Get the time in seconds
-                long seconds = 0;
-                String inputTime = args[2];
-                try {
-                    seconds = Long.parseLong(inputTime);
-                } catch (Exception e){
-                    GroupEventLogger.Log(commandSender, GroupEventLogType.failed_parse);
-                    return false;
-                }
-
-                GroupManager.Instance.removePlayerFromGroupAfter(playerToRemove.getUniqueId(), seconds);
-                return true;
-            }
-            else if(args.length > 3){
-                GroupEventLogger.Log(commandSender, GroupEventLogType.failed_invalid);
-                return false;
-            }
-
-            GroupManager.Instance.removePlayerFromGroup(playerToRemove.getUniqueId());
-            GroupEventLogger.Log(commandSender, GroupEventLogType.success_remove);
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
             return true;
         }
+
+        String[] specificArgs = Arrays.copyOfRange(args, 1, args.length);
+        switch (args[0]) {
+            case "create" -> createGroup(commandSender, specificArgs);
+            case "add" -> addPlayerToGroup(commandSender, specificArgs);
+            case "info" -> showInfo(commandSender, specificArgs);
+            case "remove" -> removePlayerFromGroup(commandSender, specificArgs);
+            case "list" -> listAllGroups(commandSender);
+            case "help" -> {
+            }
+            default -> GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+        }
+
+        return true;
+    }
+
+    /**
+     * Tries to create a new group with the given arguments.
+     * @param commandSender
+     * @param args String[] <br>
+     * args[0] = group name <br>
+     * args[1] = group prefix
+     * @example possible in-game usages: <br>
+     * /group create YourGroupName
+     */
+    public static void createGroup(CommandSender commandSender, String[] args){
+        if(args.length == 0 || args.length > 2) {
+            //TODO: invalid input
+            return;
+        }
+
+        String groupName = args[0];
+        String prefix = args.length == 2 ? args[1] : groupName;
+
+        // if group with the given name already exists -> log error message
+        if(GroupManager.Instance.groupExist(groupName)){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_group_already_exists, groupName);
+            return;
+        }
+
+        if(GroupManager.Instance.createGroup(groupName, prefix) != null){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_create, groupName);
+        }
         else{
-            GroupEventLogger.Log(commandSender, GroupEventLogType.failed_player_not_found);
-            return false;
+            //TODO: failed to create group -> cause unknown
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid, groupName);
         }
     }
 
-    /*
-    LIST-COMMAND
-        - /group list
+    /**
+     * Tries to add the given player to the given group.
+     * @param commandSender
+     * @param args String[] <br>
+     * args[0] = player name <br>
+     * args[1] = group name <br>
+     * args[2] = time in seconds
+     * @example possible in-game usages: <br>
+     * /group add Player Group <br>
+     *      - adds player permanently to this group <br> <br>
+     * /group add Player Group 60 <br>
+     *      - adds player for a period of time to this group
      */
-    private boolean list(CommandSender commandSender){
-        // This command will succeed everytime
-        GroupManager.Instance.listGroups(commandSender);
-        return true;
+    public static void addPlayerToGroup(CommandSender commandSender, String[] args){
+        if(args.length == 0 || args.length > 3){
+            //TODO: invalid input
+            return;
+        }
+
+        String playerName = args[0];
+        String groupName = args[1];
+
+        // check if given player exists -> if false, log and return
+        Player player = commandSender.getServer().getPlayer(playerName);
+        if(player == null){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_not_found, Bukkit.getPlayer(playerName));
+            return;
+        }
+
+        // check if given group exists -> if false, log and return
+        if(!GroupManager.Instance.groupExist(groupName)){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_group_not_found, groupName);
+            return;
+        }
+
+        // check if player is already in that group -> if true, log and return
+        if(GroupManager.Instance.playerInGroup(groupName, player.getUniqueId())){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_add_already_member, player, groupName);
+            return;
+        }
+
+        // remove player from its current group
+        GroupManager.Instance.removePlayerFromGroup(player.getUniqueId());
+
+        // get the time in seconds
+        long seconds = 0;
+        if(args.length == 3){
+            String timeInSeconds = args[2];
+            try {
+                seconds = Long.parseLong(timeInSeconds);
+            } catch (Exception e){
+                //TODO: invalid input
+                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_parse);
+                return;
+            }
+        }
+
+        // add player to the new group
+        if(GroupManager.Instance.addPlayerToGroup(groupName, player.getUniqueId(), seconds) != null){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_add, player);
+            return;
+        }
+
+        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_add_player_to_group, player);
+    }
+
+    /**
+     * Tries to show info about a group from either yourself or a specific player
+     * @param commandSender
+     * @param args String[] <br>
+     * args[0] = player name OR group name
+     * @example possible in-game usages: <br>
+     * /group info <br>
+     * /group info Player <br>
+     * /group info Group
+     */
+    public static void showInfo(CommandSender commandSender, String[] args){
+        if(args.length > 1){
+            //TODO: invalid input
+            return;
+        }
+
+        // check if there is no argument -> if true, show info about the group from yourself
+        if(args.length == 0){
+
+            // check if command sender is a player -> if false, log and return
+            if(!(commandSender instanceof Player player))
+            {
+                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_only_player);
+                return;
+            }
+
+            // check if player has a group -> if true, show info and return
+            if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
+                //TODO: implement show info
+                return;
+            }
+
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_no_group);
+            return;
+        }
+
+        String playerOrGroupName = args[0];
+
+        // check if argument is a player
+        Player player = Bukkit.getPlayer(playerOrGroupName);
+        if(player != null){
+
+            // check if player has a group
+            if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
+                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_no_group);
+            }
+            else{
+                //TODO: show info about players group
+            }
+            return;
+        }
+
+        // check if argument is a group
+        else if(GroupManager.Instance.groupExist(playerOrGroupName)){
+            //TODO: show info about group
+            return;
+        }
+
+        //TODO: invalid input -> rather player nor group was found
+        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+    }
+
+    /**
+     * Tries to remove given player from its group OR starts countdown to get kicked out
+     * @param commandSender
+     * @param args String[] <br>
+     * args[0] = player name <br>
+     * args[1] = time in seconds
+     * @example possible in-game usages: <br>
+     * /group remove Player <br>
+     *      - removes player instantly <br> <br>
+     * /group remove Player 60 <br>
+     *      - removes player after a period of time
+     */
+    public static void removePlayerFromGroup(CommandSender commandSender, String[] args){
+        if(args.length == 0 || args.length > 2){
+            //TODO: invalid input
+            return;
+        }
+
+        String playerName = args[0];
+
+        // check if player exists -> if true, log and return
+        Player player = commandSender.getServer().getPlayer(playerName);
+        if(player == null){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_not_found);
+            return;
+        }
+
+        // get time in seconds if it's given
+        long seconds = 0;
+        if(args.length == 2) {
+
+            // get the time in seconds
+            String timeInSeconds = args[1];
+            try {
+                seconds = Long.parseLong(timeInSeconds);
+            } catch (Exception e){
+                //TODO: invalid input
+                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_parse);
+                return;
+            }
+        }
+
+        // remove player from its current group
+        if(GroupManager.Instance.removePlayerFromGroup(player.getUniqueId(), seconds)){
+            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_remove_after);
+            return;
+        }
+
+        //TODO: failed remove player from group
+        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+    }
+
+    /**
+     * Lists all groups that exists
+     * @param commandSender
+     */
+    public static void listAllGroups(CommandSender commandSender){
+        //TODO: implement list logic
     }
 }
