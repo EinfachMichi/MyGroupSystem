@@ -1,5 +1,8 @@
 package me.michi.mygroupsystem.commands;
 
+import me.michi.mygroupsystem.Group;
+import me.michi.mygroupsystem.logs.GroupLogFlag;
+import me.michi.mygroupsystem.logs.GroupSystemInfoType;
 import me.michi.mygroupsystem.logs.GroupSystemLogType;
 import me.michi.mygroupsystem.logs.GroupSystemLogger;
 import me.michi.mygroupsystem.GroupManager;
@@ -16,7 +19,8 @@ public class GroupCommand implements CommandExecutor {
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
         // the command is invalid if there is no argument given
         if(args.length < 1){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return true;
         }
 
@@ -29,7 +33,7 @@ public class GroupCommand implements CommandExecutor {
             case "list" -> listAllGroups(commandSender);
             case "help" -> {
             }
-            default -> GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+            default -> GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_command);
         }
 
         return true;
@@ -46,26 +50,32 @@ public class GroupCommand implements CommandExecutor {
      */
     public static void createGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 2) {
-            //TODO: invalid input
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
         String groupName = args[0];
         String prefix = args.length == 2 ? args[1] : groupName;
 
-        // if group with the given name already exists -> log error message
+        // if group with the given name already exists -> log and return
         if(GroupManager.Instance.groupExist(groupName)){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_group_already_exists, groupName);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_already_exists,
+                    new GroupLogFlag("{group}", groupName));
             return;
         }
 
+        // create new group
         if(GroupManager.Instance.createGroup(groupName, prefix) != null){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_create, groupName);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_created,
+                    new GroupLogFlag("{group}", groupName));
+            return;
         }
-        else{
-            //TODO: failed to create group -> cause unknown
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid, groupName);
-        }
+
+        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_not_created,
+                new GroupLogFlag("{group}", groupName));
     }
 
     /**
@@ -83,7 +93,8 @@ public class GroupCommand implements CommandExecutor {
      */
     public static void addPlayerToGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 3){
-            //TODO: invalid input
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -93,19 +104,26 @@ public class GroupCommand implements CommandExecutor {
         // check if given player exists -> if false, log and return
         Player player = commandSender.getServer().getPlayer(playerName);
         if(player == null){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_not_found, Bukkit.getPlayer(playerName));
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_found,
+                    new GroupLogFlag("{player}", playerName));
             return;
         }
 
         // check if given group exists -> if false, log and return
         if(!GroupManager.Instance.groupExist(groupName)){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_group_not_found, groupName);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_not_found,
+                    new GroupLogFlag("{group}", groupName));
             return;
         }
 
         // check if player is already in that group -> if true, log and return
         if(GroupManager.Instance.playerInGroup(groupName, player.getUniqueId())){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_add_already_member, player, groupName);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_already_in_that_group,
+                    new GroupLogFlag("{player}", playerName),
+                    new GroupLogFlag("{group}", groupName));
             return;
         }
 
@@ -115,23 +133,30 @@ public class GroupCommand implements CommandExecutor {
         // get the time in seconds
         long seconds = 0;
         if(args.length == 3){
+
             String timeInSeconds = args[2];
             try {
+
                 seconds = Long.parseLong(timeInSeconds);
             } catch (Exception e){
-                //TODO: invalid input
-                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_parse);
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
                 return;
             }
         }
 
         // add player to the new group
         if(GroupManager.Instance.addPlayerToGroup(groupName, player.getUniqueId(), seconds) != null){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_add, player);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_added_to_group,
+                    new GroupLogFlag("{player}", playerName),
+                    new GroupLogFlag("{group}", groupName));
             return;
         }
 
-        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_add_player_to_group, player);
+        GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_added_to_group,
+                new GroupLogFlag("{player}", playerName),
+                new GroupLogFlag("{group}", groupName));
     }
 
     /**
@@ -146,7 +171,8 @@ public class GroupCommand implements CommandExecutor {
      */
     public static void showInfo(CommandSender commandSender, String[] args){
         if(args.length > 1){
-            //TODO: invalid input
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -154,19 +180,29 @@ public class GroupCommand implements CommandExecutor {
         if(args.length == 0){
 
             // check if command sender is a player -> if false, log and return
-            if(!(commandSender instanceof Player player))
-            {
-                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_only_player);
+            if(!(commandSender instanceof Player player)) {
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.sender_is_not_player);
                 return;
             }
 
             // check if player has a group -> if true, show info and return
             if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
-                //TODO: implement show info
+
+                Group group = GroupManager.Instance.getGroup(player.getUniqueId());
+                GroupSystemLogger.showGroupInfo(
+                        commandSender,
+                        GroupSystemInfoType.show_group_info,
+                        group,
+                        new GroupLogFlag("{group}", group.getGroupName()),
+                        new GroupLogFlag("{count}", String.valueOf(group.getSize()))
+                );
                 return;
             }
 
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_no_group);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_in_group,
+                    new GroupLogFlag("{player}", player.getDisplayName()));
             return;
         }
 
@@ -178,22 +214,39 @@ public class GroupCommand implements CommandExecutor {
 
             // check if player has a group
             if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
-                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_no_group);
+
+                Group group = GroupManager.Instance.getGroup(player.getUniqueId());
+                GroupSystemLogger.showGroupInfo(
+                        commandSender,
+                        GroupSystemInfoType.show_group_info,
+                        group,
+                        new GroupLogFlag("{group}", group.getGroupName()),
+                        new GroupLogFlag("{count}", String.valueOf(group.getSize()))
+                );
             }
             else{
-                //TODO: show info about players group
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_in_group,
+                        new GroupLogFlag("{player}", player.getDisplayName()));
             }
             return;
         }
 
         // check if argument is a group
         else if(GroupManager.Instance.groupExist(playerOrGroupName)){
-            //TODO: show info about group
+
+            Group group = GroupManager.Instance.getGroup(playerOrGroupName);
+            GroupSystemLogger.showGroupInfo(
+                    commandSender,
+                    GroupSystemInfoType.show_group_info,
+                    group,
+                    new GroupLogFlag("{group}", group.getGroupName()),
+                    new GroupLogFlag("{count}", String.valueOf(group.getSize()))
+            );
             return;
         }
 
-        //TODO: invalid input -> rather player nor group was found
-        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_or_player_not_found);
     }
 
     /**
@@ -210,7 +263,8 @@ public class GroupCommand implements CommandExecutor {
      */
     public static void removePlayerFromGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 2){
-            //TODO: invalid input
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -219,7 +273,9 @@ public class GroupCommand implements CommandExecutor {
         // check if player exists -> if true, log and return
         Player player = commandSender.getServer().getPlayer(playerName);
         if(player == null){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_player_not_found);
+
+            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_found,
+                    new GroupLogFlag("{player}", playerName));
             return;
         }
 
@@ -232,20 +288,36 @@ public class GroupCommand implements CommandExecutor {
             try {
                 seconds = Long.parseLong(timeInSeconds);
             } catch (Exception e){
-                //TODO: invalid input
-                GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_parse);
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
                 return;
             }
         }
 
         // remove player from its current group
+        String groupName = GroupManager.Instance.getGroup(player.getUniqueId()).getGroupName();
         if(GroupManager.Instance.removePlayerFromGroup(player.getUniqueId(), seconds)){
-            GroupSystemLogger.Log(commandSender, GroupSystemLogType.success_remove_after);
+
+            if(seconds == 0){
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_removed_from_group,
+                        new GroupLogFlag("{player}", playerName),
+                        new GroupLogFlag("{group}", groupName));
+            }
+            else{
+
+                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_removed_from_group_for_time,
+                        new GroupLogFlag("{player}", playerName),
+                        new GroupLogFlag("{group}", groupName),
+                        new GroupLogFlag("{time}", GroupSystemLogger.getTimeString(seconds)));
+            }
             return;
         }
 
-        //TODO: failed remove player from group
-        GroupSystemLogger.Log(commandSender, GroupSystemLogType.failed_invalid);
+        GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_removed_from_group,
+                new GroupLogFlag("{player}", playerName),
+                new GroupLogFlag("{group}", groupName)
+        );
     }
 
     /**
@@ -253,6 +325,13 @@ public class GroupCommand implements CommandExecutor {
      * @param commandSender
      */
     public static void listAllGroups(CommandSender commandSender){
-        //TODO: implement list logic
+
+        Group[] groups = GroupManager.Instance.getGroups();
+        GroupSystemLogger.listAllGroups(
+                commandSender,
+                GroupSystemInfoType.list_all_groups_info,
+                groups,
+                new GroupLogFlag("{count}", String.valueOf(groups == null ? 0 : groups.length))
+        );
     }
 }

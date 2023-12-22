@@ -1,20 +1,20 @@
 package me.michi.mygroupsystem.logs;
 
 public enum GroupSystemLogType {
-    failed_invalid,
-    failed_parse,
-    failed_player_not_found,
-    failed_group_not_found,
-    failed_add_already_member,
-    failed_add_player_to_group,
-    failed_player_no_group,
-    failed_only_player,
-    failed_group_already_exists,
-
-    success_create,
-    success_add,
-    success_remove,
-    success_remove_after,
-
-    time_expired,
+    invalid_command,
+    invalid_input,
+    group_not_found,
+    group_already_exists,
+    group_created,
+    group_not_created,
+    player_not_found,
+    player_already_in_that_group,
+    player_added_to_group,
+    player_not_added_to_group,
+    player_not_in_group,
+    sender_is_not_player,
+    group_or_player_not_found,
+    player_removed_from_group,
+    player_removed_from_group_for_time,
+    player_not_removed_from_group
 }

@@ -1,19 +1,28 @@
 package me.michi.mygroupsystem;
 
+import org.bukkit.Bukkit;
+
 import java.util.Date;
+import java.util.Objects;
 import java.util.UUID;
 
 public class GroupMember {
     private final UUID playerUUID;
+    private String displayName;
     private Date expirationTime;
 
     public GroupMember(UUID playerUUID, long time){
         this.playerUUID = playerUUID;
+        displayName = Objects.requireNonNull(Bukkit.getPlayer(playerUUID)).getDisplayName();
         setTime(time);
     }
 
     public UUID getPlayerUUID(){
         return playerUUID;
+    }
+
+    public String getDisplayName(){
+        return displayName;
     }
 
     public long getRemainingSeconds(){

@@ -1,0 +1,69 @@
+## color codes
+# warning = §c
+# success = §a
+# time = §f
+# player = §f
+# group = §6
+# player count = §8
+
+## flags
+# {player}
+# {group}
+# {time}
+# {count}
+
+logs:
+  - type: invalid_command
+    message: "§cUnknown command. Use \"/group help\" for help."
+
+  - type: invalid_input
+    message: "§cInvalid input. Use \"/group help\" for help."
+
+  - type: group_not_found
+    message: "§6[{group}]§c not found."
+
+  - type: group_already_exists
+    message: "§6[{group}]§c already exists."
+
+  - type: group_created
+    message: "§6[{group}]§a created successfully."
+
+  - type: group_not_created
+    message: "§cFailed to create §6[{group}]§c."
+
+  - type: player_not_found
+    message: "§f{player}§c was not found."
+
+  - type: player_already_in_that_group
+    message: "§f{player}§c is already a member of §6[{group}]§c."
+
+  - type: player_added_to_group
+    message: "§f{player}§a is now a member of §6[{group}]§c."
+
+  - type: player_not_added_to_group
+    message: "§cFailed to add §f{player}§c to §6[{group}]§c."
+
+  - type: player_not_in_group
+    message: "§f{player}§c is no member of a group yet."
+
+  - type: sender_is_not_player
+    message: "§cOnly players have permissions to execute this command."
+
+  - type: group_or_player_not_found
+    message: "§6[{group}]§c and §f{player}§c was not found."
+
+  - type: player_removed_from_group
+    message: "§f{player}§a got removed from §6[{group}]§a."
+
+  - type: player_not_removed_from_group
+    message: "§cFailed to remove §f{player}§c from §6[{group}]§c."
+
+  - type: player_removed_from_group_for_time
+    message: "§f{player}§a will be removed from §6[{group}]§a in §f({time})."
+
+infos:
+  - type: show_group_info
+    message: "§aGroup: §6[{group}]§a |§8 players ({count})\n"
+
+  - type: list_all_groups_info
+    message: "§aTotal: ({count})\n"

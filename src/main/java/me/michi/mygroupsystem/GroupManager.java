@@ -140,7 +140,7 @@ public class GroupManager {
 
     /**
      * Returns the group that the player is in
-     * @param playerUUID playerUUID
+     * @param playerUUID
      * @return null if player has no group
      */
     public Group getGroup(UUID playerUUID){
@@ -150,6 +150,27 @@ public class GroupManager {
             }
         }
         return null;
+    }
+
+    /**
+     * Tries to return the group with the given name
+     * @param groupName
+     * @return null if no group found
+     */
+    public Group getGroup(String groupName){
+        for (Group group : groups){
+            if(group.getGroupName().equals(groupName)){
+                return group;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @return all groups
+     */
+    public Group[] getGroups(){
+        return groups.toArray(new Group[0]);
     }
 
     private void startExpirationTimer(){

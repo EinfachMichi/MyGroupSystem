@@ -1,22 +1,22 @@
 package me.michi.mygroupsystem.logs;
 
 import me.michi.mygroupsystem.Group;
+import me.michi.mygroupsystem.GroupMember;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GroupSystemLogger {
 
-    private final String path = "/configuration_log.yml";
+    private final String path = "/log_configuration.yml";
 
     public static GroupSystemLogger Instance;
-    private static Map<String, List<Map<String, String>>> data;
+    private static Map<String, List<Map<String, String>>> logFileData;
+    private static Map<UUID, Queue<String>> playerEventLogQueueMap = new HashMap<>();
 
     private JavaPlugin javaPlugin;
 
@@ -26,66 +26,15 @@ public class GroupSystemLogger {
             Instance = this;
             this.javaPlugin = javaPlugin;
 
-            readConfigLogFile();
+            loadDataFromLog();
         }
     }
 
-    public static void Log(CommandSender commandSender, GroupSystemLogType groupSystemLogType){
-        Log(commandSender, groupSystemLogType, null, "", 0);
-    }
-
-    public static void Log(CommandSender commandSender, GroupSystemLogType groupSystemLogType, Player anyPlayer){
-        Log(commandSender, groupSystemLogType, anyPlayer, "", 0);
-    }
-
-    public static void Log(CommandSender commandSender, GroupSystemLogType groupSystemLogType, String groupName){
-        Log(commandSender, groupSystemLogType, null, groupName, 0);
-    }
-
-    public static void Log(CommandSender commandSender, GroupSystemLogType groupSystemLogType, Player anyPlayer, String groupName){
-        Log(commandSender, groupSystemLogType, anyPlayer, groupName, 0);
-    }
-
-    public static void Log(CommandSender commandSender, GroupSystemLogType groupSystemLogType, Player anyPlayer, long time){
-        Log(commandSender, groupSystemLogType, anyPlayer, "", time);
-    }
-
-    public static void Log(
-            CommandSender commandSender, GroupSystemLogType groupSystemLogType, Player anyPlayer, String groupName, long time){
-        if(data != null && data.containsKey("logs")){
-            List<Map<String, String>> events = data.get("logs");
-
-            for (Map<String, String> event : events) {
-
-                if(event.get("type").equals(groupSystemLogType.name())) {
-
-                    String message = event.get("message");
-
-                    // replace flags
-                    if(anyPlayer != null){
-                        message = message.replace("{anyPlayer}", anyPlayer.getDisplayName());
-                    }
-
-                    if(!groupName.isEmpty()){
-                        message = message.replace("{group}", groupName);
-                    }
-
-                    if(time > 0){
-                        message = message.replace("{time}", getTimeString(time));
-                    }
-
-                    commandSender.sendMessage(message);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void readConfigLogFile(){
+    private void loadDataFromLog(){
         try (InputStream inputStream = getClass().getResourceAsStream(path)){
             if(inputStream != null){
                 Yaml yaml = new Yaml();
-                data = yaml.load(inputStream);
+                logFileData = yaml.load(inputStream);
             }
             else{
                 javaPlugin.getLogger().info("Event configuration file couldn't be found.");
@@ -94,6 +43,124 @@ public class GroupSystemLogger {
         catch (IOException e){
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Tries to log information to the command sender
+     * @param commandSender
+     * @param groupSystemLogType
+     * @param flags
+     */
+    public static void log(
+            CommandSender commandSender,
+            GroupSystemLogType groupSystemLogType,
+            GroupLogFlag... flags
+    ){
+        if(!logFileData.containsKey("logs")){
+            return;
+        }
+
+        // get the message defined from the log type
+        String message = "";
+        for (Map<String, String> log : logFileData.get("logs")){
+            if(log.containsKey("type") && log.get("type").equals(groupSystemLogType.name())) {
+                message = log.get("message");
+                break;
+            }
+        }
+
+        // replace flags
+        for (GroupLogFlag flag : flags){
+            message = message.replace(flag.flag(), flag.value());
+        }
+
+        // finally sends the message
+        commandSender.sendMessage(message);
+    }
+
+    /**
+     * Send all infos about the given group in the chat
+     * @param commandSender
+     * @param groupSystemInfoType
+     * @param group
+     * @param flags
+     */
+    public static void showGroupInfo(
+            CommandSender commandSender,
+            GroupSystemInfoType groupSystemInfoType,
+            Group group,
+            GroupLogFlag... flags
+    ){
+        // get the message defined from the info type
+        StringBuilder message = new StringBuilder();
+        for (Map<String, String> info : logFileData.get("infos")){
+            if(info.containsKey("type") && info.get("type").equals(groupSystemInfoType.name())) {
+                message.append(info.get("message"));
+                break;
+            }
+        }
+
+        // replace flags
+        for (GroupLogFlag flag : flags){
+
+            message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
+        }
+
+        // add all group members
+        for (GroupMember groupMember : group.getGroupMembers()){
+
+            message.append("§a- §f").
+                    append(groupMember.getDisplayName()).
+                    append(" §7").
+                    append("(").
+                    append(getTimeString(groupMember.getRemainingSeconds())).
+                    append(")");
+        }
+
+        // finally sends the message
+        commandSender.sendMessage(message.toString());
+    }
+
+    /**
+     * List all groups that exists with their player count
+     * @param commandSender
+     * @param groupSystemInfoType
+     * @param groups
+     * @param flags
+     */
+    public static void listAllGroups(
+            CommandSender commandSender,
+            GroupSystemInfoType groupSystemInfoType,
+            Group[] groups,
+            GroupLogFlag... flags
+    ){
+        // get the message defined from the info type
+        StringBuilder message = new StringBuilder();
+        for (Map<String, String> info : logFileData.get("infos")){
+            if(info.containsKey("type") && info.get("type").equals(groupSystemInfoType.name())) {
+                message.append(info.get("message"));
+                break;
+            }
+        }
+
+        // replace flags
+        for (GroupLogFlag flag : flags){
+
+            message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
+        }
+
+        // add all group members
+        for (Group group : groups){
+
+            message.append("§a- §6[").
+                    append(group.getGroupName()).
+                    append("]§a |§7 players (").
+                    append(group.getSize()).
+                    append(")\n");
+        }
+
+        // finally sends the message
+        commandSender.sendMessage(message.toString());
     }
 
     /**

@@ -54,24 +54,4 @@ public class Group {
     public boolean containsGroupMember(UUID playerUUID){
         return groupMembers.containsKey(playerUUID);
     }
-
-    // TODO: remove that function and replace with config_log
-    /**
-     * @return a String[] with all infos about the group members in this group
-     */
-    public List<String> getGroupMemberInfos() {
-        List<String> infos = new ArrayList<>();
-
-//        for (GroupMember groupMember : groupMembers.values()) {
-//            //StringBuilder infoBuilder = new StringBuilder("§a-- ").append(groupMember.getName());
-//
-//            if (groupMember.getRemainingSeconds() > 0) {
-//                //infoBuilder.append(" (").append(getTimeString(groupMember.getRemainingSeconds())).append(")");
-//            }
-//
-//            //infos.add(infoBuilder.toString());
-//        }
-
-        return infos;
-    }
 }
