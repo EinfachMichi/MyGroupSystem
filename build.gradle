@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
     compileOnly "org.spigotmc:spigot-api:1.20.2-R0.1-SNAPSHOT"
+    implementation 'mysql:mysql-connector-java:8.0.31'
 }
 
 compileJava.options.encoding = 'UTF-8'

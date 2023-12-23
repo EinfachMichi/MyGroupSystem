@@ -1,9 +1,12 @@
 package me.michi.mygroupsystem;
 
+import me.michi.mygroupsystem.database.GroupMemberData;
+import me.michi.mygroupsystem.database.GroupSystemDataBase;
+
 import java.util.*;
 
-public class GroupManager {
-    public static GroupManager Instance;
+public class GroupSystemManager {
+    public static GroupSystemManager Instance;
 
     private final long INTERVAL = 1000; // 1 second
     private Timer expirationTimer = new Timer(true);
@@ -11,7 +14,7 @@ public class GroupManager {
 
     private ArrayList<Group> groups = new ArrayList<>();;
 
-    public GroupManager(){
+    public GroupSystemManager(){
         if(Instance == null){
             Instance = this;
             startExpirationTimer();
@@ -31,52 +34,48 @@ public class GroupManager {
 
         Group newGroup = new Group(name, prefix);
         groups.add(newGroup);
+        GroupSystemDataBase.uploadGroup(newGroup);
         return newGroup;
     }
 
     /**
-     * Add given player to given group for a specific time -> where 0 seconds is permanently
-     * @param groupName
+     * Add given group member to the given group for a specific time -> where 0 seconds is permanently
      * @param playerUUID
-     * @param time in seconds
+     * @param displayName
+     * @param groupName
+     * @param seconds
      * @return group member that is getting created
      */
-    public GroupMember addPlayerToGroup(String groupName, UUID playerUUID, long time){
-        for (Group group : groups){
-            if(group.getGroupName().equals(groupName)){
-                GroupMember newMember = group.addGroupMember(playerUUID, time);
-                assignGroupMemberWithExpirationTime(newMember);
-                return newMember;
-            }
+    public GroupMember addPlayerToGroup(UUID playerUUID, String displayName, String groupName, long seconds){
+
+        Group group = getGroup(groupName);
+        GroupMember newMember = group.addGroupMember(playerUUID, displayName, seconds);
+
+        if(newMember == null){
+            return null;
         }
-        return null;
+
+        GroupSystemDataBase.uploadGroupMember(newMember);
+        assignGroupMemberWithExpirationTime(newMember);
+        return newMember;
     }
 
     /**
-     * Removes the player instantly from its current group
+     * Removes player from group instantly or after a period of time
      * @param playerUUID
      */
-    public boolean removePlayerFromGroup(UUID playerUUID) {
-        for (Group group : groups) {
-            if (group.containsGroupMember(playerUUID)) {
-                expirationTimes.remove(getGroupMember(playerUUID));
-                group.removeGroupMember(playerUUID);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Starts countdown for player to get removed from its group
-     * @param playerUUID
-     */
-    public boolean removePlayerFromGroup(UUID playerUUID, long seconds) {
-        if(seconds < 1){
-            return removePlayerFromGroup(playerUUID);
+    public boolean removePlayerFromGroup(UUID playerUUID, long seconds){
+        if(!playerHasGroup(playerUUID)){
+            return false;
         }
 
-        GroupMember groupMember = GroupManager.Instance.getGroupMember(playerUUID);
+        Group group = getGroup(playerUUID);
+        if(seconds == 0){
+            group.removeGroupMember(playerUUID);
+            return true;
+        }
+
+        GroupMember groupMember = getGroupMember(playerUUID);
         groupMember.setTime(seconds);
         assignGroupMemberWithExpirationTime(groupMember);
         return true;
@@ -204,7 +203,7 @@ public class GroupManager {
             // if the time is expired, kick the player out of the group
             if(currentTime.after(expirationTime)){
                 // TODO: implement logic for if the player is not on the server
-                removePlayerFromGroup(groupMember.getPlayerUUID());
+                removePlayerFromGroup(groupMember.getPlayerUUID(), 0);
                 expirationTimes.remove(groupMember);
             }
         }

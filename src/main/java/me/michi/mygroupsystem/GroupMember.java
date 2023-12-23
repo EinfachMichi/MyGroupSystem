@@ -1,5 +1,6 @@
 package me.michi.mygroupsystem;
 
+import me.michi.mygroupsystem.database.GroupMemberData;
 import org.bukkit.Bukkit;
 
 import java.util.Date;
@@ -8,12 +9,14 @@ import java.util.UUID;
 
 public class GroupMember {
     private final UUID playerUUID;
-    private String displayName;
+    private final String displayName;
+    private final String groupName;
     private Date expirationTime;
 
-    public GroupMember(UUID playerUUID, long time){
+    public GroupMember(UUID playerUUID, String displayName, String groupName, long time){
         this.playerUUID = playerUUID;
-        displayName = Objects.requireNonNull(Bukkit.getPlayer(playerUUID)).getDisplayName();
+        this.displayName = displayName;
+        this.groupName = groupName;
         setTime(time);
     }
 
@@ -23,6 +26,10 @@ public class GroupMember {
 
     public String getDisplayName(){
         return displayName;
+    }
+
+    public String getGroupName() {
+        return groupName;
     }
 
     public long getRemainingSeconds(){

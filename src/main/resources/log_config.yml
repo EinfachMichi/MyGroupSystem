@@ -72,3 +72,23 @@ infos:
 
   - type: show_group_info
     message: "§a- §6[{group}]§a | players ({count})\n"
+
+  - type: show_help
+    message: |
+      §2-----Create-----§a
+      §a/group create <groupName>
+       
+      §2-----Add-----§a
+      /group add <player> <groupName>
+      /group add <player> <groupName> <seconds>
+        
+      §2-----Remove-----§a
+      /group remove <player>
+      /group remove <player> <seconds>
+       
+      §2-----Info-----§a
+      /group info
+      /group info <groupName>
+       
+      §2-----List-----§a
+      /group list

@@ -3,9 +3,9 @@ package me.michi.mygroupsystem;
 import java.util.*;
 
 public class Group {
-    private String groupName;
-    private String prefix;
-    private Map<UUID, GroupMember> groupMembers;
+    private final String groupName;
+    private final String prefix;
+    private final Map<UUID, GroupMember> groupMembers;
 
     public Group(String groupName, String prefix){
         this.groupName = groupName;
@@ -36,11 +36,16 @@ public class Group {
     /**
      * Add the given player to the group as a group member with a specific time -> where 0 secs = permanently
      * @param playerUUID
-     * @param time in seconds
+     * @param displayName
+     * @param seconds
      * @return new member
      */
-    public GroupMember addGroupMember(UUID playerUUID, long time){
-        GroupMember newMember = new GroupMember(playerUUID, time);
+    public GroupMember addGroupMember(UUID playerUUID, String displayName, long seconds){
+        if(groupMembers.containsKey(playerUUID)){
+            return null;
+        }
+
+        GroupMember newMember = new GroupMember(playerUUID, displayName, groupName, seconds);
         groupMembers.put(playerUUID, newMember);
         return newMember;
     }

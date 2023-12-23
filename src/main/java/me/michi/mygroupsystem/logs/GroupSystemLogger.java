@@ -12,7 +12,7 @@ import java.util.*;
 
 public class GroupSystemLogger {
 
-    private final String path = "/log_configuration.yml";
+    private final String path = "/log_config.yml";
 
     public static GroupSystemLogger Instance;
     private static Map<String, List<Map<String, String>>> logFileData;
@@ -203,6 +203,27 @@ public class GroupSystemLogger {
         }
 
         // finally, send the message to the command sender
+        commandSender.sendMessage(message.toString());
+    }
+
+    /**
+     * Print help in the chat -> helps the player to get an overview of the command
+     * @param commandSender
+     */
+    public static void showHelp(CommandSender commandSender){
+        // get the message defined for the header information
+        StringBuilder message = new StringBuilder();
+        StringBuilder groupInfoTemplate = new StringBuilder();
+
+        // loop through the log file data to find show_help type
+        for (Map<String, String> info : logFileData.get("infos")){
+
+            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_help.name())) {
+                message.append(info.get("message"));
+                break;
+            }
+        }
+
         commandSender.sendMessage(message.toString());
     }
 
