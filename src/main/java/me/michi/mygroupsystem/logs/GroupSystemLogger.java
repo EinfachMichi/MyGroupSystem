@@ -81,83 +81,128 @@ public class GroupSystemLogger {
     /**
      * Send all infos about the given group in the chat
      * @param commandSender
-     * @param groupSystemInfoType
      * @param group
      * @param flags
      */
-    public static void showGroupInfo(
+    public static void showInfo(
             CommandSender commandSender,
-            GroupSystemInfoType groupSystemInfoType,
             Group group,
             GroupLogFlag... flags
     ){
-        // get the message defined from the info type
+        // get the message defined for the header information
         StringBuilder message = new StringBuilder();
+        StringBuilder groupMemberInfoTemplate = new StringBuilder();
+
+        // loop through the log file data to find header and group member info templates
         for (Map<String, String> info : logFileData.get("infos")){
-            if(info.containsKey("type") && info.get("type").equals(groupSystemInfoType.name())) {
+
+            // check for the header information type
+            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_group_info_header.name())){
                 message.append(info.get("message"));
+            }
+
+            // check for the group member information type
+            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_player_info.name())){
+                groupMemberInfoTemplate.append(info.get("message"));
+            }
+
+            // if both header and group member info templates are found, break out of the loop
+            if(!message.isEmpty() && !groupMemberInfoTemplate.isEmpty()){
                 break;
             }
         }
 
-        // replace flags
+        // replace flags in the header message
         for (GroupLogFlag flag : flags){
-
             message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
         }
 
-        // add all group members
+        // list all group members
         for (GroupMember groupMember : group.getGroupMembers()){
 
-            message.append("§a- §f").
-                    append(groupMember.getDisplayName()).
-                    append(" §7").
-                    append(groupMember.getRemainingSeconds() > 0 ? getTimeString(groupMember.getRemainingSeconds()) : "");
+            // create a copy of the group member info template for each member
+            StringBuilder groupMemberInfo = new StringBuilder(groupMemberInfoTemplate);
+
+            // define flags for group member information
+            GroupLogFlag[] groupMemberFlags = new GroupLogFlag[]{
+                    new GroupLogFlag("{player}", groupMember.getDisplayName()),
+                    new GroupLogFlag("{time}", getTimeString(groupMember.getRemainingSeconds()))
+            };
+
+            // replace flags in the group member information template
+            for (GroupLogFlag flag : groupMemberFlags){
+                groupMemberInfo = new StringBuilder(groupMemberInfo.toString().replace(flag.flag(), flag.value()));
+            }
+
+            // append the group member information to the overall message
+            message.append(groupMemberInfo);
         }
 
-        // finally sends the message
+        // finally, send the message to the command sender
         commandSender.sendMessage(message.toString());
     }
 
     /**
      * List all groups that exists with their player count
      * @param commandSender
-     * @param groupSystemInfoType
      * @param groups
      * @param flags
      */
     public static void listAllGroups(
             CommandSender commandSender,
-            GroupSystemInfoType groupSystemInfoType,
             Group[] groups,
             GroupLogFlag... flags
     ){
-        // get the message defined from the info type
+        // get the message defined for the header information
         StringBuilder message = new StringBuilder();
+        StringBuilder groupInfoTemplate = new StringBuilder();
+
+        // loop through the log file data to find header and group info templates
         for (Map<String, String> info : logFileData.get("infos")){
-            if(info.containsKey("type") && info.get("type").equals(groupSystemInfoType.name())) {
+
+            // check for the header information type
+            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.list_all_groups_info_header.name())) {
                 message.append(info.get("message"));
+            }
+
+            // check for the group information type
+            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_group_info.name())) {
+                groupInfoTemplate.append(info.get("message"));
+            }
+
+            // if both header and group info templates are found, break out of the loop
+            if(!message.isEmpty() && !groupInfoTemplate.isEmpty()){
                 break;
             }
         }
 
-        // replace flags
+        // replace flags in the header message
         for (GroupLogFlag flag : flags){
-
             message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
         }
 
-        // add all group members
+        // list all groups
         for (Group group : groups){
 
-            message.append("§a- §6[").
-                    append(group.getGroupName()).
-                    append("]§a | players (").
-                    append(group.getSize()).
-                    append(")\n");
+            // create a copy of the group info template for each group
+            StringBuilder groupInfo = new StringBuilder(groupInfoTemplate);
+
+            // define flags for group information
+            GroupLogFlag[] groupFlag = new GroupLogFlag[]{
+                    new GroupLogFlag("{group}", group.getGroupName()),
+                    new GroupLogFlag("{count}", String.valueOf(group.getSize()))
+            };
+
+            // replace flags in the group information template
+            for (GroupLogFlag flag : groupFlag){
+                groupInfo = new StringBuilder(groupInfo.toString().replace(flag.flag(), flag.value()));
+            }
+
+            // append the group information to the overall message
+            message.append(groupInfo);
         }
 
-        // finally sends the message
+        // finally, send the message to the command sender
         commandSender.sendMessage(message.toString());
     }
 
@@ -166,8 +211,8 @@ public class GroupSystemLogger {
      * @return format(day, hours, minutes, seconds)
      */
     public static String getTimeString(long seconds) {
-        if (seconds < 0) {
-            return "Invalid input";
+        if (seconds <= 0) {
+            return " ";
         }
 
         long days = seconds / (24 * 60 * 60);

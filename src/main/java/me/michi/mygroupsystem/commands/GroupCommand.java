@@ -268,9 +268,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
 
                 Group group = GroupManager.Instance.getGroup(player.getUniqueId());
-                GroupSystemLogger.showGroupInfo(
+                GroupSystemLogger.showInfo(
                         commandSender,
-                        GroupSystemInfoType.show_group_info,
                         group,
                         new GroupLogFlag("{group}", group.getGroupName()),
                         new GroupLogFlag("{count}", String.valueOf(group.getSize()))
@@ -294,9 +293,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             if(GroupManager.Instance.playerHasGroup(player.getUniqueId())){
 
                 Group group = GroupManager.Instance.getGroup(player.getUniqueId());
-                GroupSystemLogger.showGroupInfo(
+                GroupSystemLogger.showInfo(
                         commandSender,
-                        GroupSystemInfoType.show_group_info,
                         group,
                         new GroupLogFlag("{group}", group.getGroupName()),
                         new GroupLogFlag("{count}", String.valueOf(group.getSize()))
@@ -314,9 +312,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         else if(GroupManager.Instance.groupExist(playerOrGroupName)){
 
             Group group = GroupManager.Instance.getGroup(playerOrGroupName);
-            GroupSystemLogger.showGroupInfo(
+            GroupSystemLogger.showInfo(
                     commandSender,
-                    GroupSystemInfoType.show_group_info,
                     group,
                     new GroupLogFlag("{group}", group.getGroupName()),
                     new GroupLogFlag("{count}", String.valueOf(group.getSize()))
@@ -409,7 +406,6 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         Group[] groups = GroupManager.Instance.getGroups();
         GroupSystemLogger.listAllGroups(
                 commandSender,
-                GroupSystemInfoType.list_all_groups_info,
                 groups,
                 new GroupLogFlag("{count}", String.valueOf(groups == null ? 0 : groups.length))
         );

@@ -61,8 +61,14 @@ logs:
     message: "§a{player} will be removed from §6[{group}]§a in §f{time}."
 
 infos:
-  - type: show_group_info
+  - type: show_group_info_header
     message: "§2Group: §6[{group}]§a | players ({count})\n"
 
-  - type: list_all_groups_info
+  - type: show_player_info
+    message: "§a- {player} §7{time}\n"
+
+  - type: list_all_groups_info_header
     message: "§2Total: §a({count})\n"
+
+  - type: show_group_info
+    message: "§a- §6[{group}]§a | players ({count})\n"
