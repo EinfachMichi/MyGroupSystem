@@ -206,7 +206,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         }
 
         // remove player from its current group
-        GroupSystemManager.Instance.removePlayerFromGroup(player.getUniqueId(), 0);
+        Group group = GroupSystemManager.Instance.getGroup(player.getUniqueId());
+        group.removeGroupMember(player.getUniqueId());
 
         // get the time in seconds
         long seconds = 0;

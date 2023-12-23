@@ -40,12 +40,12 @@ public class GroupSystemDataBase {
                 String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
 
                 try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Group`");
+                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Group`;");
                      ResultSet resultSet = preparedStatement.executeQuery()) {
 
                     while (resultSet.next()) {
-                        String groupName = resultSet.getString("`name`");
-                        String prefix = resultSet.getString("`prefix`");
+                        String groupName = resultSet.getString("name");
+                        String prefix = resultSet.getString("prefix");
 
                         GroupData groupData = new GroupData(groupName, prefix);
                         groupDataList.add(groupData);
@@ -76,14 +76,14 @@ public class GroupSystemDataBase {
                 String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
 
                 try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `GroupMember`");
+                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `GroupMember`;");
                      ResultSet resultSet = preparedStatement.executeQuery()) {
 
                     while (resultSet.next()) {
-                        UUID playerUUID = UUID.fromString(resultSet.getString("`playerUUID`"));
-                        String displayName = resultSet.getString("`displayName`");
-                        String groupName = resultSet.getString("`groupName`");
-                        long seconds = Long.parseLong(resultSet.getString("`seconds`"));
+                        UUID playerUUID = UUID.fromString(resultSet.getString("playerUUID"));
+                        String displayName = resultSet.getString("displayName");
+                        String groupName = resultSet.getString("groupName");
+                        long seconds = Long.parseLong(resultSet.getString("seconds"));
 
                         GroupMemberData groupMemberData = new GroupMemberData(playerUUID, displayName, groupName, seconds);
                         groupDataList.add(groupMemberData);
@@ -113,7 +113,12 @@ public class GroupSystemDataBase {
 
                 try (Connection connection = DriverManager.getConnection(url, user, password);
                      PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT INTO `GroupMember` (`playerUUID`, `groupName`, `displayName`, `seconds`) VALUES (?, ?, ?, ?)"
+                             "INSERT INTO `GroupMember` (`playerUUID`, `groupName`, `displayName`, `seconds`) \n" +
+                                     "VALUES (?, ?, ?, ?) \n" +
+                                     "ON DUPLICATE KEY UPDATE \n" +
+                                     "    `groupName` = VALUES(`groupName`), \n" +
+                                     "    `displayName` = VALUES(`displayName`), \n" +
+                                     "    `seconds` = VALUES(`seconds`);"
                      )
                 ) {
                     preparedStatement.setString(1, groupMember.getPlayerUUID().toString());
@@ -145,7 +150,7 @@ public class GroupSystemDataBase {
 
                 try (Connection connection = DriverManager.getConnection(url, user, password);
                      PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT INTO `Group` (`name`, `prefix`) VALUES (?, ?)"
+                             "INSERT IGNORE INTO `Group` (`name`, `prefix`) VALUES (?, ?);"
                      )
                 ) {
                     preparedStatement.setString(1, group.getGroupName());

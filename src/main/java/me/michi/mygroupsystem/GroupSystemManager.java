@@ -49,6 +49,10 @@ public class GroupSystemManager {
     public GroupMember addPlayerToGroup(UUID playerUUID, String displayName, String groupName, long seconds){
 
         Group group = getGroup(groupName);
+        if(group == null){
+            return null;
+        }
+
         GroupMember newMember = group.addGroupMember(playerUUID, displayName, seconds);
 
         if(newMember == null){
@@ -70,14 +74,19 @@ public class GroupSystemManager {
         }
 
         Group group = getGroup(playerUUID);
+        GroupMember groupMember = getGroupMember(playerUUID);
+
         if(seconds == 0){
             group.removeGroupMember(playerUUID);
-            return true;
+            groupMember = addPlayerToGroup(playerUUID, groupMember.getDisplayName(), "Player", 0);
+        }
+        else{
+
+            groupMember.setTime(seconds);
+            assignGroupMemberWithExpirationTime(groupMember);
         }
 
-        GroupMember groupMember = getGroupMember(playerUUID);
-        groupMember.setTime(seconds);
-        assignGroupMemberWithExpirationTime(groupMember);
+        GroupSystemDataBase.uploadGroupMember(groupMember);
         return true;
     }
 
