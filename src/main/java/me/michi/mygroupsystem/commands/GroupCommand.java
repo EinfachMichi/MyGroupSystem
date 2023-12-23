@@ -10,11 +10,15 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
-public class GroupCommand implements CommandExecutor {
+public class GroupCommand implements CommandExecutor, TabCompleter {
+
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
         // the command is invalid if there is no argument given
@@ -38,6 +42,80 @@ public class GroupCommand implements CommandExecutor {
 
         return true;
     }
+
+    @Override
+    public List<String> onTabComplete(CommandSender commandSender, Command command, String label, String[] args) {
+
+        List<String> list = new ArrayList<>();
+        switch (args.length){
+            case 1 -> list = tabCompleteFirst();
+            case 2 -> list = tabCompleteSecond(args[0]);
+            case 3 -> list = tabCompleteThird(args[0]);
+            case 4 -> list = tabCompleteFourth(args[0]);
+        }
+
+        return list;
+    }
+
+    //COMMAND-TAB COMPLETER SECTION
+    //------------------------------------------------------------------------------------------------------------------
+
+    private List<String> tabCompleteFirst(){
+        return Arrays.asList("create", "add", "remove", "info", "list", "help");
+    }
+
+    private List<String> tabCompleteSecond(String firstArgument){
+
+        List<String> tabCompleteList = new ArrayList<>();
+        if(firstArgument.equals("add") || firstArgument.equals("remove")){
+
+            Player[] onlinePlayers = Bukkit.getOnlinePlayers().toArray(new Player[0]);
+            for (Player player : onlinePlayers){
+                tabCompleteList.add(player.getDisplayName());
+            }
+        }
+        else if(firstArgument.equals("info")){
+
+            Group[] groups = GroupManager.Instance.getGroups();
+            for (Group group : groups){
+                tabCompleteList.add(group.getGroupName());
+            }
+        }
+
+        return tabCompleteList;
+    }
+
+    private List<String> tabCompleteThird(String firstArgument){
+
+        List<String> tabCompleteList = new ArrayList<>();
+        if(firstArgument.equals("add")){
+
+            Group[] groups = GroupManager.Instance.getGroups();
+            for (Group group : groups){
+                tabCompleteList.add(group.getGroupName());
+            }
+        }
+        else if(firstArgument.equals("remove")){
+
+            tabCompleteList = Arrays.asList("60", "300", "900", "1800", "3600");
+        }
+
+        return tabCompleteList;
+    }
+
+    private List<String> tabCompleteFourth(String firstArgument){
+
+        List<String> tabCompleteList = new ArrayList<>();
+
+        if(firstArgument.equals("add")){
+            tabCompleteList = Arrays.asList("60", "300", "900", "1800", "3600");
+        }
+
+        return tabCompleteList;
+    }
+
+    //COMMAND-EXECUTOR SECTION
+    //------------------------------------------------------------------------------------------------------------------
 
     /**
      * Tries to create a new group with the given arguments.
@@ -92,7 +170,7 @@ public class GroupCommand implements CommandExecutor {
      *      - adds player for a period of time to this group
      */
     public static void addPlayerToGroup(CommandSender commandSender, String[] args){
-        if(args.length == 0 || args.length > 3){
+        if(args.length == 0 || args.length > 3 || args.length == 1){
 
             GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
             return;
@@ -246,7 +324,9 @@ public class GroupCommand implements CommandExecutor {
             return;
         }
 
-        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_or_player_not_found);
+        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_or_player_not_found,
+                new GroupLogFlag("{player}", playerOrGroupName),
+                new GroupLogFlag("{group}", playerOrGroupName));
     }
 
     /**
@@ -257,7 +337,7 @@ public class GroupCommand implements CommandExecutor {
      * args[1] = time in seconds
      * @example possible in-game usages: <br>
      * /group remove Player <br>
-     *      - removes player instantly <br> <br>
+     *      - removes player instantly from its group <br> <br>
      * /group remove Player 60 <br>
      *      - removes player after a period of time
      */

@@ -112,9 +112,7 @@ public class GroupSystemLogger {
             message.append("§a- §f").
                     append(groupMember.getDisplayName()).
                     append(" §7").
-                    append("(").
-                    append(getTimeString(groupMember.getRemainingSeconds())).
-                    append(")");
+                    append(groupMember.getRemainingSeconds() > 0 ? getTimeString(groupMember.getRemainingSeconds()) : "");
         }
 
         // finally sends the message
@@ -154,7 +152,7 @@ public class GroupSystemLogger {
 
             message.append("§a- §6[").
                     append(group.getGroupName()).
-                    append("]§a |§7 players (").
+                    append("]§a | players (").
                     append(group.getSize()).
                     append(")\n");
         }
@@ -167,9 +165,9 @@ public class GroupSystemLogger {
      * @param seconds seconds
      * @return format(day, hours, minutes, seconds)
      */
-    public static String getTimeString(long seconds){
+    public static String getTimeString(long seconds) {
         if (seconds < 0) {
-            return "";
+            return "Invalid input";
         }
 
         long days = seconds / (24 * 60 * 60);
@@ -177,23 +175,34 @@ public class GroupSystemLogger {
         long minutes = ((seconds % (24 * 60 * 60)) % (60 * 60)) / 60;
         long remainingSeconds = ((seconds % (24 * 60 * 60)) % (60 * 60)) % 60;
 
-        StringBuilder result = new StringBuilder();
+        StringBuilder result = new StringBuilder("(");
 
         if (days > 0) {
-            result.append(days).append(" day").append(days > 1 ? "s" : "").append(" ");
+            result.append(days).append(" day").append(days > 1 ? "s" : "");
+            if (hours > 0 || minutes > 0 || remainingSeconds > 0) {
+                result.append(" ");
+            }
         }
 
         if (hours > 0) {
-            result.append(hours).append(" hour").append(hours > 1 ? "s" : "").append(" ");
+            result.append(hours).append(" hour").append(hours > 1 ? "s" : "");
+            if (minutes > 0 || remainingSeconds > 0) {
+                result.append(" ");
+            }
         }
 
         if (minutes > 0) {
-            result.append(minutes).append(" minute").append(minutes > 1 ? "s" : "").append(" ");
+            result.append(minutes).append(" minute").append(minutes > 1 ? "s" : "");
+            if (remainingSeconds > 0) {
+                result.append(" ");
+            }
         }
 
         if (remainingSeconds > 0) {
             result.append(remainingSeconds).append(" second").append(remainingSeconds > 1 ? "s" : "");
         }
+
+        result.append(")");
 
         return result.toString();
     }

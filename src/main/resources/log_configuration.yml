@@ -2,7 +2,6 @@
 # warning = §c
 # success = §a
 # time = §f
-# player = §f
 # group = §6
 # player count = §8
 
@@ -32,38 +31,38 @@ logs:
     message: "§cFailed to create §6[{group}]§c."
 
   - type: player_not_found
-    message: "§f{player}§c was not found."
+    message: "§c{player} was not found."
 
   - type: player_already_in_that_group
-    message: "§f{player}§c is already a member of §6[{group}]§c."
+    message: "§c{player} is already a member of §6[{group}]§c."
 
   - type: player_added_to_group
-    message: "§f{player}§a is now a member of §6[{group}]§c."
+    message: "§a{player} is now a member of §6[{group}]§a."
 
   - type: player_not_added_to_group
-    message: "§cFailed to add §f{player}§c to §6[{group}]§c."
+    message: "§cFailed to add {player} to §6[{group}]§c."
 
   - type: player_not_in_group
-    message: "§f{player}§c is no member of a group yet."
+    message: "§c{player} is no member of a group yet."
 
   - type: sender_is_not_player
     message: "§cOnly players have permissions to execute this command."
 
   - type: group_or_player_not_found
-    message: "§6[{group}]§c and §f{player}§c was not found."
+    message: "§cGroup §6[{group}]§c or player {player} was not found."
 
   - type: player_removed_from_group
-    message: "§f{player}§a got removed from §6[{group}]§a."
+    message: "§a{player} got removed from §6[{group}]§a."
 
   - type: player_not_removed_from_group
-    message: "§cFailed to remove §f{player}§c from §6[{group}]§c."
+    message: "§cFailed to remove {player} from §6[{group}]§c."
 
   - type: player_removed_from_group_for_time
-    message: "§f{player}§a will be removed from §6[{group}]§a in §f({time})."
+    message: "§a{player} will be removed from §6[{group}]§a in §f{time}."
 
 infos:
   - type: show_group_info
-    message: "§aGroup: §6[{group}]§a |§8 players ({count})\n"
+    message: "§2Group: §6[{group}]§a | players ({count})\n"
 
   - type: list_all_groups_info
-    message: "§aTotal: ({count})\n"
+    message: "§2Total: §a({count})\n"
