@@ -33,13 +33,6 @@ public class Group {
         return groupMembers.size();
     }
 
-    /**
-     * Add the given player to the group as a group member with a specific time -> where 0 secs = permanently
-     * @param playerUUID
-     * @param displayName
-     * @param seconds
-     * @return new member
-     */
     public GroupMember addGroupMember(UUID playerUUID, String displayName, long seconds){
         if(groupMembers.containsKey(playerUUID)){
             return null;
@@ -51,9 +44,7 @@ public class Group {
     }
 
     public void removeGroupMember(UUID playerUUID){
-        if(containsGroupMember(playerUUID)){
-            groupMembers.remove(playerUUID);
-        }
+        groupMembers.remove(playerUUID);
     }
 
     public boolean containsGroupMember(UUID playerUUID){

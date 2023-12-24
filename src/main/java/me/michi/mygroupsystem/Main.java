@@ -20,19 +20,12 @@ public final class Main extends JavaPlugin {
     public void onEnable() {
         initialDatabaseLoad();
 
-        initSingletons();
         registerCommands();
         registerListeners();
     }
 
     @Override
     public void onDisable() {
-
-    }
-
-    private void initSingletons(){
-        new GroupSystemLogger(this);
-        new GroupSystemManager();
     }
 
     private void registerCommands(){
@@ -43,7 +36,7 @@ public final class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GroupSystemListener(this), this);
     }
 
-    private void initialDatabaseLoad(){
+    private void initialDatabaseLoad() {
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             CompletableFuture<List<GroupData>> futureGroupData = GroupSystemDataBase.retrieveGroupData();
             CompletableFuture<List<GroupMemberData>> futureGroupMemberData = GroupSystemDataBase.retrieveGroupMembers();
@@ -54,27 +47,30 @@ public final class Main extends JavaPlugin {
                 List<GroupMemberData> groupMemberDataList = futureGroupMemberData.get();
                 List<LogData> logDataList = futureLogData.get();
 
-                // create groups
-                for (GroupData groupData : groupDataList){
-                    GroupSystemManager.Instance.createGroup(groupData.groupName(), groupData.prefix());
-                }
-
-                // add group members to their group
-                for (GroupMemberData groupMemberData : groupMemberDataList){
-                    GroupSystemManager.Instance.addPlayerToGroup(
-                            groupMemberData.playerUUID(),
-                            groupMemberData.displayName(),
-                            groupMemberData.groupName(),
-                            groupMemberData.seconds()
-                    );
-                }
-
-                // add all logs to the system logger
-                GroupSystemLogger.initLogEventMap(logDataList);
+                createGroups(groupDataList);
+                addGroupMembers(groupMemberDataList);
+                GroupSystemLogger.getInstance().initLogEventMap(logDataList);
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         });
+    }
+
+    private void createGroups(List<GroupData> groupDataList) {
+        for (GroupData groupData : groupDataList) {
+            GroupSystemManager.getInstance().createGroup(groupData.groupName(), groupData.prefix());
+        }
+    }
+
+    private void addGroupMembers(List<GroupMemberData> groupMemberDataList) {
+        for (GroupMemberData groupMemberData : groupMemberDataList) {
+            GroupSystemManager.getInstance().addPlayerToGroup(
+                    groupMemberData.playerUUID(),
+                    groupMemberData.displayName(),
+                    groupMemberData.groupName(),
+                    groupMemberData.seconds()
+            );
+        }
     }
 }

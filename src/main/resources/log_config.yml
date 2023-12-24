@@ -64,7 +64,7 @@ logs:
     message: "§cYou got removed from §6[{group}]§c. You are now in group §6[Player]§c."
 
   - type: player_joined_the_server
-    message: "§f[§6{group}§f] {player} joined the server."
+    message: "§f[§6{group}§f] {player} §ajoined the server."
 
 infos:
   - type: show_group_info_header

@@ -2,7 +2,6 @@ package me.michi.mygroupsystem.commands;
 
 import me.michi.mygroupsystem.Group;
 import me.michi.mygroupsystem.GroupMember;
-import me.michi.mygroupsystem.database.GroupMemberData;
 import me.michi.mygroupsystem.logs.GroupLogFlag;
 import me.michi.mygroupsystem.logs.GroupSystemLogType;
 import me.michi.mygroupsystem.logs.GroupSystemLogger;
@@ -24,8 +23,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender commandSender, Command command, String label, String[] args) {
         // the command is invalid if there is no argument given
         if(args.length < 1){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return true;
         }
 
@@ -37,7 +35,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             case "remove" -> removePlayerFromGroup(commandSender, specificArgs);
             case "list" -> listAllGroups(commandSender);
             case "help" -> help(commandSender);
-            default -> GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_command);
+            default -> GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_command);
         }
 
         return true;
@@ -65,38 +63,21 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> tabCompleteSecond(String firstArgument){
-
         List<String> tabCompleteList = new ArrayList<>();
-        if(firstArgument.equals("add") || firstArgument.equals("remove")){
-
-            Player[] onlinePlayers = Bukkit.getOnlinePlayers().toArray(new Player[0]);
-            for (Player player : onlinePlayers){
-                tabCompleteList.add(player.getDisplayName());
-            }
-        }
-        else if(firstArgument.equals("info")){
-
-            Group[] groups = GroupSystemManager.Instance.getGroups();
-            for (Group group : groups){
-                tabCompleteList.add(group.getGroupName());
-            }
+        if ("add".equals(firstArgument) || "remove".equals(firstArgument)) {
+            tabCompleteList.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getDisplayName).toList());
+        } else if ("info".equals(firstArgument)) {
+            tabCompleteList.addAll(Arrays.asList(GroupSystemManager.getInstance().getGroupNames()));
         }
 
         return tabCompleteList;
     }
 
     private List<String> tabCompleteThird(String firstArgument){
-
         List<String> tabCompleteList = new ArrayList<>();
-        if(firstArgument.equals("add")){
-
-            Group[] groups = GroupSystemManager.Instance.getGroups();
-            for (Group group : groups){
-                tabCompleteList.add(group.getGroupName());
-            }
-        }
-        else if(firstArgument.equals("remove")){
-
+        if ("add".equals(firstArgument)) {
+            tabCompleteList.addAll(Arrays.asList(GroupSystemManager.getInstance().getGroupNames()));
+        } else if ("remove".equals(firstArgument)) {
             tabCompleteList = Arrays.asList("60", "300", "900", "1800", "3600");
         }
 
@@ -104,10 +85,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> tabCompleteFourth(String firstArgument){
-
         List<String> tabCompleteList = new ArrayList<>();
-
-        if(firstArgument.equals("add")){
+        if ("add".equals(firstArgument)) {
             tabCompleteList = Arrays.asList("60", "300", "900", "1800", "3600");
         }
 
@@ -128,8 +107,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
      */
     public static void createGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 2) {
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -137,22 +115,19 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         String prefix = args.length == 2 ? args[1] : groupName;
 
         // if group with the given name already exists -> log and return
-        if(GroupSystemManager.Instance.groupExist(groupName)){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_already_exists,
+        if(GroupSystemManager.getInstance().groupExists(groupName)){
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_already_exists,
                     new GroupLogFlag("{group}", groupName));
             return;
         }
 
-        // create new group
-        if(GroupSystemManager.Instance.createGroup(groupName, prefix) != null){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_created,
+        if(GroupSystemManager.getInstance().createGroup(groupName, prefix) != null){
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_created,
                     new GroupLogFlag("{group}", groupName));
             return;
         }
 
-        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_not_created,
+        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_not_created,
                 new GroupLogFlag("{group}", groupName));
     }
 
@@ -171,8 +146,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
      */
     public static void addPlayerToGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 3 || args.length == 1){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -180,63 +154,57 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         String groupName = args[1];
 
         // check if given player exists -> if false, log and return
-        Player player = commandSender.getServer().getPlayer(playerName);
+        Player player = Bukkit.getPlayer(playerName);
         if(player == null){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_found,
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_found,
                     new GroupLogFlag("{player}", playerName));
             return;
         }
 
         // check if given group exists -> if false, log and return
-        if(!GroupSystemManager.Instance.groupExist(groupName)){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.group_not_found,
+        if(!GroupSystemManager.getInstance().groupExists(groupName)){
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_not_found,
                     new GroupLogFlag("{group}", groupName));
             return;
         }
 
         // check if player is already in that group -> if true, log and return
-        if(GroupSystemManager.Instance.playerInGroup(groupName, player.getUniqueId())){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_already_in_that_group,
+        if(GroupSystemManager.getInstance().playerInGroup(groupName, player.getUniqueId())){
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_already_in_that_group,
                     new GroupLogFlag("{player}", playerName),
                     new GroupLogFlag("{group}", groupName));
             return;
         }
 
         // remove player from its current group
-        Group group = GroupSystemManager.Instance.getGroup(player.getUniqueId());
+        Group group = GroupSystemManager.getInstance().getGroup(player.getUniqueId());
         group.removeGroupMember(player.getUniqueId());
 
         // get the time in seconds
         long seconds = 0;
         if(args.length == 3){
-
             String timeInSeconds = args[2];
             try {
-
                 seconds = Long.parseLong(timeInSeconds);
             } catch (Exception e){
-
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
                 return;
             }
         }
 
         // add player to the new group
-        GroupMember groupMember = GroupSystemManager.Instance.addPlayerToGroup(
+        GroupMember groupMember = GroupSystemManager.getInstance().addPlayerToGroup(
                 player.getUniqueId(), playerName, groupName, seconds
         );
         if(groupMember != null){
 
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_added_to_group,
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_added_to_group,
                     new GroupLogFlag("{player}", playerName),
                     new GroupLogFlag("{group}", groupName));
             return;
         }
 
-        GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_added_to_group,
+        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_added_to_group,
                 new GroupLogFlag("{player}", playerName),
                 new GroupLogFlag("{group}", groupName));
     }
@@ -253,8 +221,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
      */
     public static void showInfo(CommandSender commandSender, String[] args){
         if(args.length > 1){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
@@ -263,16 +230,14 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
 
             // check if command sender is a player -> if false, log and return
             if(!(commandSender instanceof Player player)) {
-
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.sender_is_not_player);
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.sender_is_not_player);
                 return;
             }
 
             // check if player has a group -> if true, show info and return
-            if(GroupSystemManager.Instance.playerHasGroup(player.getUniqueId())){
-
-                Group group = GroupSystemManager.Instance.getGroup(player.getUniqueId());
-                GroupSystemLogger.showInfo(
+            if(GroupSystemManager.getInstance().playerHasGroup(player.getUniqueId())){
+                Group group = GroupSystemManager.getInstance().getGroup(player.getUniqueId());
+                GroupSystemLogger.getInstance().showInfo(
                         commandSender,
                         group,
                         new GroupLogFlag("{group}", group.getGroupName()),
@@ -282,22 +247,21 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             }
 
 
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_in_group,
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_in_group,
                     new GroupLogFlag("{player}", player.getDisplayName()));
             return;
         }
 
         String playerOrGroupName = args[0];
+        Player player = Bukkit.getPlayer(playerOrGroupName);
 
         // check if argument is a player
-        Player player = Bukkit.getPlayer(playerOrGroupName);
         if(player != null){
 
             // check if player has a group
-            if(GroupSystemManager.Instance.playerHasGroup(player.getUniqueId())){
-
-                Group group = GroupSystemManager.Instance.getGroup(player.getUniqueId());
-                GroupSystemLogger.showInfo(
+            if(GroupSystemManager.getInstance().playerHasGroup(player.getUniqueId())){
+                Group group = GroupSystemManager.getInstance().getGroup(player.getUniqueId());
+                GroupSystemLogger.getInstance().showInfo(
                         commandSender,
                         group,
                         new GroupLogFlag("{group}", group.getGroupName()),
@@ -306,17 +270,16 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             }
             else{
 
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_in_group,
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_in_group,
                         new GroupLogFlag("{player}", player.getDisplayName()));
             }
             return;
         }
-
         // check if argument is a group
-        else if(GroupSystemManager.Instance.groupExist(playerOrGroupName)){
+        else if(GroupSystemManager.getInstance().groupExists(playerOrGroupName)){
 
-            Group group = GroupSystemManager.Instance.getGroup(playerOrGroupName);
-            GroupSystemLogger.showInfo(
+            Group group = GroupSystemManager.getInstance().getGroup(playerOrGroupName);
+            GroupSystemLogger.getInstance().showInfo(
                     commandSender,
                     group,
                     new GroupLogFlag("{group}", group.getGroupName()),
@@ -325,7 +288,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        GroupSystemLogger.log(commandSender, GroupSystemLogType.group_or_player_not_found,
+        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_or_player_not_found,
                 new GroupLogFlag("{player}", playerOrGroupName),
                 new GroupLogFlag("{group}", playerOrGroupName));
     }
@@ -344,18 +307,16 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
      */
     public static void removePlayerFromGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 2){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
         String playerName = args[0];
+        Player player = commandSender.getServer().getPlayer(playerName);
 
         // check if player exists -> if true, log and return
-        Player player = commandSender.getServer().getPlayer(playerName);
         if(player == null){
-
-            GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_found,
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_found,
                     new GroupLogFlag("{player}", playerName));
             return;
         }
@@ -363,31 +324,25 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         // get time in seconds if it's given
         long seconds = 0;
         if(args.length == 2) {
-
-            // get the time in seconds
             String timeInSeconds = args[1];
             try {
                 seconds = Long.parseLong(timeInSeconds);
             } catch (Exception e){
-
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.invalid_input);
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
                 return;
             }
         }
 
         // remove player from its current group
-        String groupName = GroupSystemManager.Instance.getGroup(player.getUniqueId()).getGroupName();
-        if(GroupSystemManager.Instance.removePlayerFromGroup(player.getUniqueId(), seconds)){
-
+        String groupName = GroupSystemManager.getInstance().getGroup(player.getUniqueId()).getGroupName();
+        if(GroupSystemManager.getInstance().removePlayerFromGroup(player.getUniqueId(), seconds)){
             if(seconds == 0){
-
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_removed_from_group,
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group,
                         new GroupLogFlag("{player}", playerName),
                         new GroupLogFlag("{group}", groupName));
             }
             else{
-
-                GroupSystemLogger.log(commandSender, GroupSystemLogType.player_removed_from_group_for_time,
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group_for_time,
                         new GroupLogFlag("{player}", playerName),
                         new GroupLogFlag("{group}", groupName),
                         new GroupLogFlag("{time}", GroupSystemLogger.getTimeString(seconds)));
@@ -395,7 +350,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        GroupSystemLogger.log(commandSender, GroupSystemLogType.player_not_removed_from_group,
+        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_removed_from_group,
                 new GroupLogFlag("{player}", playerName),
                 new GroupLogFlag("{group}", groupName)
         );
@@ -404,11 +359,12 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
     /**
      * Lists all groups that exists
      * @param commandSender
+     * @example possible in-game usages: <br>
+     * /group list
      */
     public static void listAllGroups(CommandSender commandSender){
-
-        Group[] groups = GroupSystemManager.Instance.getGroups();
-        GroupSystemLogger.listAllGroups(
+        Group[] groups = GroupSystemManager.getInstance().getGroups();
+        GroupSystemLogger.getInstance().listAllGroups(
                 commandSender,
                 groups,
                 new GroupLogFlag("{count}", String.valueOf(groups == null ? 0 : groups.length))
@@ -418,8 +374,10 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
     /**
      * Lists all possible commands you can execute
      * @param commandSender
+     * @example possible in-game usages: <br>
+     * /group help
      */
     public static void help(CommandSender commandSender){
-        GroupSystemLogger.showHelp(commandSender);
+        GroupSystemLogger.getInstance().showHelp(commandSender);
     }
 }
