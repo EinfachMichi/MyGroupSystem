@@ -367,7 +367,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         GroupSystemLogger.getInstance().listAllGroups(
                 commandSender,
                 groups,
-                new GroupLogFlag("{count}", String.valueOf(groups == null ? 0 : groups.length))
+                new GroupLogFlag("{count}", String.valueOf(groups.length))
         );
     }
 

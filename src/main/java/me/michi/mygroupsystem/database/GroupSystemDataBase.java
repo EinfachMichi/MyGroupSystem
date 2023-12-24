@@ -149,11 +149,11 @@ public class GroupSystemDataBase {
 
                 try (Connection connection = DriverManager.getConnection(url, user, password);
                      PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT INTO `GroupMember` (`playerUUID`, `groupName`, `displayName`, `seconds`) \n" +
+                             "INSERT INTO `GroupMember` (`playerUUID`, `displayName`, `groupName`, `seconds`) \n" +
                                      "VALUES (?, ?, ?, ?) \n" +
                                      "ON DUPLICATE KEY UPDATE \n" +
-                                     "    `groupName` = VALUES(`groupName`), \n" +
                                      "    `displayName` = VALUES(`displayName`), \n" +
+                                     "    `groupName` = VALUES(`groupName`), \n" +
                                      "    `seconds` = VALUES(`seconds`);"
                      )
                 ) {
