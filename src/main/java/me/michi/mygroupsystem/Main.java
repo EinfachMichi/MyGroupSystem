@@ -4,6 +4,7 @@ import me.michi.mygroupsystem.commands.GroupCommand;
 import me.michi.mygroupsystem.database.GroupData;
 import me.michi.mygroupsystem.database.GroupMemberData;
 import me.michi.mygroupsystem.database.GroupSystemDataBase;
+import me.michi.mygroupsystem.database.LogData;
 import me.michi.mygroupsystem.listeners.GroupSystemListener;
 import me.michi.mygroupsystem.logs.GroupSystemLogger;
 import org.bukkit.Bukkit;
@@ -39,17 +40,19 @@ public final class Main extends JavaPlugin {
     }
 
     private void registerListeners(){
-        getServer().getPluginManager().registerEvents(new GroupSystemListener(), this);
+        getServer().getPluginManager().registerEvents(new GroupSystemListener(this), this);
     }
 
     private void initialDatabaseLoad(){
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             CompletableFuture<List<GroupData>> futureGroupData = GroupSystemDataBase.retrieveGroupData();
             CompletableFuture<List<GroupMemberData>> futureGroupMemberData = GroupSystemDataBase.retrieveGroupMembers();
+            CompletableFuture<List<LogData>> futureLogData = GroupSystemDataBase.retrieveLogData();
 
             try {
                 List<GroupData> groupDataList = futureGroupData.get();
                 List<GroupMemberData> groupMemberDataList = futureGroupMemberData.get();
+                List<LogData> logDataList = futureLogData.get();
 
                 // create groups
                 for (GroupData groupData : groupDataList){
@@ -65,6 +68,9 @@ public final class Main extends JavaPlugin {
                             groupMemberData.seconds()
                     );
                 }
+
+                // add all logs to the system logger
+                GroupSystemLogger.initLogEventMap(logDataList);
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();

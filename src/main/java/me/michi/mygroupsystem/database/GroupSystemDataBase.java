@@ -97,6 +97,42 @@ public class GroupSystemDataBase {
         }, executor);
     }
 
+    public static CompletableFuture<List<LogData>> retrieveLogData() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<LogData> logDataList = new ArrayList<>();
+
+            try {
+                Map<String, String> config = readYamlConfig();
+
+                assert config != null;
+                String host = String.valueOf(config.get("host"));
+                String port = String.valueOf(config.get("port"));
+                String database = config.get("name");
+                String user = config.get("username");
+                String password = config.get("password");
+
+                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+
+                try (Connection connection = DriverManager.getConnection(url, user, password);
+                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Log`;");
+                     ResultSet resultSet = preparedStatement.executeQuery()) {
+
+                    while (resultSet.next()) {
+                        UUID playerUUID = UUID.fromString(resultSet.getString("playerUUID"));
+                        String message = resultSet.getString("message");
+
+                        LogData logData = new LogData(playerUUID, message);
+                        logDataList.add(logData);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return logDataList;
+        }, executor);
+    }
+
     public static CompletableFuture<Void> uploadGroupMember(GroupMember groupMember) {
         return CompletableFuture.runAsync(() -> {
             try {
@@ -157,6 +193,64 @@ public class GroupSystemDataBase {
                     preparedStatement.setString(2, group.getGroupPrefix());
 
                     preparedStatement.executeUpdate();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, executor);
+    }
+
+    public static CompletableFuture<Void> uploadLog(UUID playerUUID, String message) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, String> config = readYamlConfig();
+
+                assert config != null;
+                String host = String.valueOf(config.get("host"));
+                String port = String.valueOf(config.get("port"));
+                String database = config.get("name");
+                String user = config.get("username");
+                String password = config.get("password");
+
+                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+
+                try (Connection connection = DriverManager.getConnection(url, user, password);
+                     PreparedStatement preparedStatement = connection.prepareStatement(
+                             "INSERT IGNORE INTO `Log` (`playerUUID`, `message`) VALUES (?, ?);"
+                     )
+                ) {
+                    preparedStatement.setString(1, playerUUID.toString());
+                    preparedStatement.setString(2, message);
+
+                    preparedStatement.executeUpdate();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, executor);
+    }
+
+    public static CompletableFuture<Void> deleteLogEntry(UUID playerUUID, String message) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, String> config = readYamlConfig();
+
+                assert config != null;
+                String host = String.valueOf(config.get("host"));
+                String port = String.valueOf(config.get("port"));
+                String database = config.get("name");
+                String user = config.get("username");
+                String password = config.get("password");
+
+                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+
+                try (Connection connection = DriverManager.getConnection(url, user, password)) {
+                    String deleteQuery = "DELETE FROM `Log` WHERE `playerUUID` = ? AND `message` = ?";
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
+                        preparedStatement.setString(1, playerUUID.toString());
+                        preparedStatement.setString(2, message);
+                        preparedStatement.executeUpdate();
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();

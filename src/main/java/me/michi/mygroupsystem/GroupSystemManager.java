@@ -2,6 +2,9 @@ package me.michi.mygroupsystem;
 
 import me.michi.mygroupsystem.database.GroupMemberData;
 import me.michi.mygroupsystem.database.GroupSystemDataBase;
+import me.michi.mygroupsystem.logs.GroupLogFlag;
+import me.michi.mygroupsystem.logs.GroupSystemLogType;
+import me.michi.mygroupsystem.logs.GroupSystemLogger;
 
 import java.util.*;
 
@@ -54,7 +57,6 @@ public class GroupSystemManager {
         }
 
         GroupMember newMember = group.addGroupMember(playerUUID, displayName, seconds);
-
         if(newMember == null){
             return null;
         }
@@ -211,7 +213,11 @@ public class GroupSystemManager {
 
             // if the time is expired, kick the player out of the group
             if(currentTime.after(expirationTime)){
-                // TODO: implement logic for if the player is not on the server
+                GroupSystemLogger.addLogToQueue(
+                        groupMember.getPlayerUUID(),
+                        GroupSystemLogType.you_got_removed_from_group,
+                        new GroupLogFlag("{group}", groupMember.getGroupName())
+                );
                 removePlayerFromGroup(groupMember.getPlayerUUID(), 0);
                 expirationTimes.remove(groupMember);
             }

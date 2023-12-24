@@ -16,5 +16,7 @@ public enum GroupSystemLogType {
     group_or_player_not_found,
     player_removed_from_group,
     player_removed_from_group_for_time,
-    player_not_removed_from_group
+    player_not_removed_from_group,
+    you_got_removed_from_group,
+    player_joined_the_server
 }

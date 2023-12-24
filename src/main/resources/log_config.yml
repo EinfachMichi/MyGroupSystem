@@ -60,6 +60,12 @@ logs:
   - type: player_removed_from_group_for_time
     message: "§a{player} will be removed from §6[{group}]§a in §f{time}."
 
+  - type: you_got_removed_from_group
+    message: "§cYou got removed from §6[{group}]§c. You are now in group §6[Player]§c."
+
+  - type: player_joined_the_server
+    message: "§f[§6{group}§f] {player} joined the server."
+
 infos:
   - type: show_group_info_header
     message: "§2Group: §6[{group}]§a | players ({count})\n"

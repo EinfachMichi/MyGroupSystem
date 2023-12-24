@@ -2,7 +2,11 @@ package me.michi.mygroupsystem.logs;
 
 import me.michi.mygroupsystem.Group;
 import me.michi.mygroupsystem.GroupMember;
+import me.michi.mygroupsystem.database.GroupSystemDataBase;
+import me.michi.mygroupsystem.database.LogData;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.yaml.snakeyaml.Yaml;
 
@@ -16,7 +20,7 @@ public class GroupSystemLogger {
 
     public static GroupSystemLogger Instance;
     private static Map<String, List<Map<String, String>>> logFileData;
-    private static Map<UUID, Queue<String>> playerEventLogQueueMap = new HashMap<>();
+    private static Map<UUID, List<String>> playerEventLogsMap = new HashMap<>();
 
     private JavaPlugin javaPlugin;
 
@@ -31,16 +35,20 @@ public class GroupSystemLogger {
     }
 
     private void loadDataFromLog(){
+
         try (InputStream inputStream = getClass().getResourceAsStream(path)){
+
             if(inputStream != null){
                 Yaml yaml = new Yaml();
                 logFileData = yaml.load(inputStream);
             }
             else{
+
                 javaPlugin.getLogger().info("Event configuration file couldn't be found.");
             }
         }
         catch (IOException e){
+
             e.printStackTrace();
         }
     }
@@ -60,21 +68,11 @@ public class GroupSystemLogger {
             return;
         }
 
-        // get the message defined from the log type
-        String message = "";
-        for (Map<String, String> log : logFileData.get("logs")){
-            if(log.containsKey("type") && log.get("type").equals(groupSystemLogType.name())) {
-                message = log.get("message");
-                break;
-            }
-        }
-
-        // replace flags
+        String message = getLogMessage(groupSystemLogType);
         for (GroupLogFlag flag : flags){
             message = message.replace(flag.flag(), flag.value());
         }
 
-        // finally sends the message
         commandSender.sendMessage(message);
     }
 
@@ -89,56 +87,30 @@ public class GroupSystemLogger {
             Group group,
             GroupLogFlag... flags
     ){
-        // get the message defined for the header information
-        StringBuilder message = new StringBuilder();
-        StringBuilder groupMemberInfoTemplate = new StringBuilder();
 
-        // loop through the log file data to find header and group member info templates
-        for (Map<String, String> info : logFileData.get("infos")){
+        StringBuilder message = new StringBuilder(getInfoMessage(GroupSystemInfoType.show_group_info_header));
+        StringBuilder groupMemberInfoTemplate = new StringBuilder(getInfoMessage(GroupSystemInfoType.show_player_info));
 
-            // check for the header information type
-            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_group_info_header.name())){
-                message.append(info.get("message"));
-            }
-
-            // check for the group member information type
-            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_player_info.name())){
-                groupMemberInfoTemplate.append(info.get("message"));
-            }
-
-            // if both header and group member info templates are found, break out of the loop
-            if(!message.isEmpty() && !groupMemberInfoTemplate.isEmpty()){
-                break;
-            }
-        }
-
-        // replace flags in the header message
         for (GroupLogFlag flag : flags){
             message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
         }
 
-        // list all group members
         for (GroupMember groupMember : group.getGroupMembers()){
 
-            // create a copy of the group member info template for each member
             StringBuilder groupMemberInfo = new StringBuilder(groupMemberInfoTemplate);
 
-            // define flags for group member information
             GroupLogFlag[] groupMemberFlags = new GroupLogFlag[]{
                     new GroupLogFlag("{player}", groupMember.getDisplayName()),
                     new GroupLogFlag("{time}", getTimeString(groupMember.getRemainingSeconds()))
             };
 
-            // replace flags in the group member information template
             for (GroupLogFlag flag : groupMemberFlags){
                 groupMemberInfo = new StringBuilder(groupMemberInfo.toString().replace(flag.flag(), flag.value()));
             }
 
-            // append the group member information to the overall message
             message.append(groupMemberInfo);
         }
 
-        // finally, send the message to the command sender
         commandSender.sendMessage(message.toString());
     }
 
@@ -153,57 +125,102 @@ public class GroupSystemLogger {
             Group[] groups,
             GroupLogFlag... flags
     ){
-        // get the message defined for the header information
+
         StringBuilder message = new StringBuilder();
         StringBuilder groupInfoTemplate = new StringBuilder();
 
-        // loop through the log file data to find header and group info templates
-        for (Map<String, String> info : logFileData.get("infos")){
+        message.append(getInfoMessage(GroupSystemInfoType.list_all_groups_info_header));
+        groupInfoTemplate.append(getInfoMessage(GroupSystemInfoType.show_group_info));
 
-            // check for the header information type
-            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.list_all_groups_info_header.name())) {
-                message.append(info.get("message"));
-            }
-
-            // check for the group information type
-            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_group_info.name())) {
-                groupInfoTemplate.append(info.get("message"));
-            }
-
-            // if both header and group info templates are found, break out of the loop
-            if(!message.isEmpty() && !groupInfoTemplate.isEmpty()){
-                break;
-            }
-        }
-
-        // replace flags in the header message
         for (GroupLogFlag flag : flags){
             message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
         }
 
-        // list all groups
         for (Group group : groups){
 
-            // create a copy of the group info template for each group
             StringBuilder groupInfo = new StringBuilder(groupInfoTemplate);
-
-            // define flags for group information
             GroupLogFlag[] groupFlag = new GroupLogFlag[]{
                     new GroupLogFlag("{group}", group.getGroupName()),
                     new GroupLogFlag("{count}", String.valueOf(group.getSize()))
             };
 
-            // replace flags in the group information template
             for (GroupLogFlag flag : groupFlag){
                 groupInfo = new StringBuilder(groupInfo.toString().replace(flag.flag(), flag.value()));
             }
 
-            // append the group information to the overall message
             message.append(groupInfo);
         }
 
-        // finally, send the message to the command sender
         commandSender.sendMessage(message.toString());
+    }
+
+    /**
+     * Add a log to the player. When he is offline, it will be queued
+     * @param playerUUID
+     * @param groupSystemLogType
+     * @param flags
+     */
+    public static void addLogToQueue(
+            UUID playerUUID,
+            GroupSystemLogType groupSystemLogType,
+            GroupLogFlag... flags
+    ) {
+
+        StringBuilder message = new StringBuilder(getLogMessage(groupSystemLogType));
+
+        for (GroupLogFlag flag : flags){
+            message = new StringBuilder(message.toString().replace(flag.flag(), flag.value()));
+        }
+
+        Player player = Bukkit.getPlayer(playerUUID);
+        if(player != null){
+            player.sendMessage(message.toString());
+            return;
+        }
+
+        List<String> playerLogs = playerEventLogsMap.get(playerUUID);
+        if(playerLogs == null){
+            playerLogs = new ArrayList<>();
+        }
+
+        playerLogs.add(message.toString());
+        playerEventLogsMap.put(playerUUID, playerLogs);
+        GroupSystemDataBase.uploadLog(playerUUID, message.toString());
+    }
+
+    /**
+     * Initialize the log data coming from the database
+     * @param logDataList
+     */
+    public static void initLogEventMap(List<LogData> logDataList){
+
+        for (LogData logData : logDataList){
+
+            List<String> playerLogList = playerEventLogsMap.get(logData.playerUUID());
+            if(playerLogList == null){
+                playerLogList = new ArrayList<>();
+            }
+
+            playerLogList.add(logData.message());
+            playerEventLogsMap.put(logData.playerUUID(), playerLogList);
+        }
+    }
+
+    /**
+     * If there are logs for that players in queue, it will send those to it
+     * @param player
+     */
+    public static void trySendLogs(Player player){
+
+        if(playerEventLogsMap.containsKey(player.getUniqueId())){
+
+            for (String message : playerEventLogsMap.get(player.getUniqueId())){
+                player.sendMessage(message);
+                GroupSystemDataBase.deleteLogEntry(player.getUniqueId(), message);
+            }
+
+            playerEventLogsMap.get(player.getUniqueId()).clear();
+        }
     }
 
     /**
@@ -211,20 +228,35 @@ public class GroupSystemLogger {
      * @param commandSender
      */
     public static void showHelp(CommandSender commandSender){
-        // get the message defined for the header information
-        StringBuilder message = new StringBuilder();
-        StringBuilder groupInfoTemplate = new StringBuilder();
+        commandSender.sendMessage(getInfoMessage(GroupSystemInfoType.show_help));
+    }
 
-        // loop through the log file data to find show_help type
-        for (Map<String, String> info : logFileData.get("infos")){
+    public static String getLogMessage(GroupSystemLogType groupSystemLogType){
 
-            if(info.containsKey("type") && info.get("type").equals(GroupSystemInfoType.show_help.name())) {
-                message.append(info.get("message"));
+        String message = "";
+        for (Map<String, String> log : logFileData.get("logs")){
+
+            if(log.containsKey("type") && log.get("type").equals(groupSystemLogType.name())) {
+
+                message = log.get("message");
                 break;
             }
         }
+        return message;
+    }
 
-        commandSender.sendMessage(message.toString());
+    public static String getInfoMessage(GroupSystemInfoType groupSystemInfoType){
+
+        String message = "";
+        for (Map<String, String> log : logFileData.get("infos")){
+
+            if(log.containsKey("type") && log.get("type").equals(groupSystemInfoType.name())) {
+
+                message = log.get("message");
+                break;
+            }
+        }
+        return message;
     }
 
     /**
