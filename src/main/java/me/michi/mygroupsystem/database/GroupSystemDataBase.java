@@ -6,11 +6,7 @@ import me.michi.mygroupsystem.Main;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,26 +19,36 @@ public class GroupSystemDataBase {
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
 
+    private static Connection getConnection() throws SQLException {
+        Map<String, String> config = readYamlConfig();
+        assert config != null;
+        String host = String.valueOf(config.get("host"));
+        String port = String.valueOf(config.get("port"));
+        String database = config.get("name");
+        String user = config.get("username");
+        String password = config.get("password");
+        String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
+        return DriverManager.getConnection(url, user, password);
+    }
+
+    private static Map<String, String> readYamlConfig() {
+        try (InputStream input = Main.class.getClassLoader().getResourceAsStream("config.yml")) {
+            Yaml yaml = new Yaml();
+            return yaml.load(input);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public static CompletableFuture<List<GroupData>> retrieveGroupData() {
         return CompletableFuture.supplyAsync(() -> {
             List<GroupData> groupDataList = new ArrayList<>();
 
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Group`;")) {
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Group`;");
-                     ResultSet resultSet = preparedStatement.executeQuery()) {
-
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     while (resultSet.next()) {
                         String groupName = resultSet.getString("name");
                         String prefix = resultSet.getString("prefix");
@@ -51,7 +57,7 @@ public class GroupSystemDataBase {
                         groupDataList.add(groupData);
                     }
                 }
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
 
@@ -63,22 +69,10 @@ public class GroupSystemDataBase {
         return CompletableFuture.supplyAsync(() -> {
             List<GroupMemberData> groupDataList = new ArrayList<>();
 
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `GroupMember`;")) {
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `GroupMember`;");
-                     ResultSet resultSet = preparedStatement.executeQuery()) {
-
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     while (resultSet.next()) {
                         UUID playerUUID = UUID.fromString(resultSet.getString("playerUUID"));
                         String displayName = resultSet.getString("displayName");
@@ -89,7 +83,7 @@ public class GroupSystemDataBase {
                         groupDataList.add(groupMemberData);
                     }
                 }
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
 
@@ -101,22 +95,10 @@ public class GroupSystemDataBase {
         return CompletableFuture.supplyAsync(() -> {
             List<LogData> logDataList = new ArrayList<>();
 
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Log`;")) {
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `Log`;");
-                     ResultSet resultSet = preparedStatement.executeQuery()) {
-
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     while (resultSet.next()) {
                         UUID playerUUID = UUID.fromString(resultSet.getString("playerUUID"));
                         String message = resultSet.getString("message");
@@ -125,7 +107,7 @@ public class GroupSystemDataBase {
                         logDataList.add(logData);
                     }
                 }
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
 
@@ -135,36 +117,23 @@ public class GroupSystemDataBase {
 
     public static CompletableFuture<Void> uploadGroupMember(GroupMember groupMember) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement(
+                         "INSERT INTO `GroupMember` (`playerUUID`, `displayName`, `groupName`, `seconds`) \n" +
+                                 "VALUES (?, ?, ?, ?) \n" +
+                                 "ON DUPLICATE KEY UPDATE \n" +
+                                 "    `displayName` = VALUES(`displayName`), \n" +
+                                 "    `groupName` = VALUES(`groupName`), \n" +
+                                 "    `seconds` = VALUES(`seconds`);"
+                 )
+            ) {
+                preparedStatement.setString(1, groupMember.getPlayerUUID().toString());
+                preparedStatement.setString(2, groupMember.getDisplayName());
+                preparedStatement.setString(3, groupMember.getGroupName());
+                preparedStatement.setLong(4, groupMember.getRemainingSeconds());
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT INTO `GroupMember` (`playerUUID`, `displayName`, `groupName`, `seconds`) \n" +
-                                     "VALUES (?, ?, ?, ?) \n" +
-                                     "ON DUPLICATE KEY UPDATE \n" +
-                                     "    `displayName` = VALUES(`displayName`), \n" +
-                                     "    `groupName` = VALUES(`groupName`), \n" +
-                                     "    `seconds` = VALUES(`seconds`);"
-                     )
-                ) {
-                    preparedStatement.setString(1, groupMember.getPlayerUUID().toString());
-                    preparedStatement.setString(2, groupMember.getDisplayName());
-                    preparedStatement.setString(3, groupMember.getGroupName());
-                    preparedStatement.setLong(4, groupMember.getRemainingSeconds());
-
-                    preparedStatement.executeUpdate();
-                }
-            } catch (Exception e) {
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }, executor);
@@ -172,29 +141,16 @@ public class GroupSystemDataBase {
 
     public static CompletableFuture<Void> uploadGroup(Group group) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement(
+                         "INSERT IGNORE INTO `Group` (`name`, `prefix`) VALUES (?, ?);"
+                 )
+            ) {
+                preparedStatement.setString(1, group.getGroupName());
+                preparedStatement.setString(2, group.getGroupPrefix());
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT IGNORE INTO `Group` (`name`, `prefix`) VALUES (?, ?);"
-                     )
-                ) {
-                    preparedStatement.setString(1, group.getGroupName());
-                    preparedStatement.setString(2, group.getGroupPrefix());
-
-                    preparedStatement.executeUpdate();
-                }
-            } catch (Exception e) {
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }, executor);
@@ -202,29 +158,16 @@ public class GroupSystemDataBase {
 
     public static CompletableFuture<Void> uploadLog(UUID playerUUID, String message) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, String> config = readYamlConfig();
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement(
+                         "INSERT IGNORE INTO `Log` (`playerUUID`, `message`) VALUES (?, ?);"
+                 )
+            ) {
+                preparedStatement.setString(1, playerUUID.toString());
+                preparedStatement.setString(2, message);
 
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password);
-                     PreparedStatement preparedStatement = connection.prepareStatement(
-                             "INSERT IGNORE INTO `Log` (`playerUUID`, `message`) VALUES (?, ?);"
-                     )
-                ) {
-                    preparedStatement.setString(1, playerUUID.toString());
-                    preparedStatement.setString(2, message);
-
-                    preparedStatement.executeUpdate();
-                }
-            } catch (Exception e) {
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }, executor);
@@ -232,40 +175,16 @@ public class GroupSystemDataBase {
 
     public static CompletableFuture<Void> deleteLogEntry(UUID playerUUID, String message) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, String> config = readYamlConfig();
-
-                assert config != null;
-                String host = String.valueOf(config.get("host"));
-                String port = String.valueOf(config.get("port"));
-                String database = config.get("name");
-                String user = config.get("username");
-                String password = config.get("password");
-
-                String url = "jdbc:mysql://" + host + ":" + port + "/" + database;
-
-                try (Connection connection = DriverManager.getConnection(url, user, password)) {
-                    String deleteQuery = "DELETE FROM `Log` WHERE `playerUUID` = ? AND `message` = ?";
-                    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
-                        preparedStatement.setString(1, playerUUID.toString());
-                        preparedStatement.setString(2, message);
-                        preparedStatement.executeUpdate();
-                    }
+            try (Connection connection = getConnection()) {
+                String deleteQuery = "DELETE FROM `Log` WHERE `playerUUID` = ? AND `message` = ?";
+                try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
+                    preparedStatement.setString(1, playerUUID.toString());
+                    preparedStatement.setString(2, message);
+                    preparedStatement.executeUpdate();
                 }
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }, executor);
-    }
-
-    private static Map<String, String> readYamlConfig() {
-
-        try (InputStream input = Main.class.getClassLoader().getResourceAsStream("config.yml")) {
-            Yaml yaml = new Yaml();
-            return yaml.load(input);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 }
