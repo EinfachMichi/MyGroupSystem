@@ -66,6 +66,9 @@ logs:
   - type: player_joined_the_server
     message: "§f[§6{group}§f] {player} §ajoined the server."
 
+  - type: group_removed
+    message: "§6[{group}]§a removed. All of its members are now in group §6[Player]§a."
+
 infos:
   - type: show_group_info_header
     message: "§2Group: §6[{group}]§a | players ({count})\n"
@@ -91,10 +94,12 @@ infos:
       §2-----Remove-----§a
       /group remove <player>
       /group remove <player> <seconds>
+      /group remove <groupName>
        
       §2-----Info-----§a
       /group info
       /group info <groupName>
+      /group info <player>
        
       §2-----List-----§a
       /group list

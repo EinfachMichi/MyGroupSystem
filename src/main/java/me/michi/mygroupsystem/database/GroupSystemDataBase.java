@@ -4,7 +4,9 @@ import me.michi.mygroupsystem.Group;
 import me.michi.mygroupsystem.GroupMember;
 import me.michi.mygroupsystem.Main;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
@@ -32,10 +34,16 @@ public class GroupSystemDataBase {
     }
 
     private static Map<String, String> readYamlConfig() {
+        Map<String, String> config = null;
         try (InputStream input = Main.class.getClassLoader().getResourceAsStream("config.yml")) {
-            Yaml yaml = new Yaml();
-            return yaml.load(input);
-        } catch (Exception e) {
+            if (input != null) {
+                Yaml yaml = new Yaml();
+                return yaml.load(input);
+            } else {
+                System.err.println("Resource 'config.yml' not found!");
+                return null;
+            }
+        } catch (IOException | YAMLException e) {
             e.printStackTrace();
             return null;
         }
@@ -115,6 +123,27 @@ public class GroupSystemDataBase {
         }, executor);
     }
 
+    public static CompletableFuture<ServerInfo> retrieveServerInfo() {
+        return CompletableFuture.supplyAsync(() -> {
+            ServerInfo serverInfo = null;
+            try (Connection connection = getConnection();
+                 PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `ServerInfo`;")) {
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    while (resultSet.next()) {
+                        long lastTimeOnline = Long.parseLong(resultSet.getString("lastTimeOnline"));
+
+                        serverInfo = new ServerInfo(lastTimeOnline);
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            return serverInfo;
+        }, executor);
+    }
+
     public static CompletableFuture<Void> uploadGroupMember(GroupMember groupMember) {
         return CompletableFuture.runAsync(() -> {
             try (Connection connection = getConnection();
@@ -173,6 +202,20 @@ public class GroupSystemDataBase {
         }, executor);
     }
 
+    public static void uploadServerInfo() {
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(
+                     "UPDATE `ServerInfo` SET `lastTimeOnline` = ?;"
+             )
+        ) {
+            preparedStatement.setLong(1, System.currentTimeMillis());
+
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static CompletableFuture<Void> deleteLogEntry(UUID playerUUID, String message) {
         return CompletableFuture.runAsync(() -> {
             try (Connection connection = getConnection()) {
@@ -180,6 +223,21 @@ public class GroupSystemDataBase {
                 try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
                     preparedStatement.setString(1, playerUUID.toString());
                     preparedStatement.setString(2, message);
+                    preparedStatement.executeUpdate();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }, executor);
+    }
+
+    public static CompletableFuture<Void> deleteGroupEntry(Group group) {
+        return CompletableFuture.runAsync(() -> {
+            try (Connection connection = getConnection()) {
+                String deleteQuery = "DELETE FROM `Group` WHERE `name` = ? AND `prefix` = ?";
+                try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
+                    preparedStatement.setString(1, group.getGroupName());
+                    preparedStatement.setString(2, group.getGroupPrefix());
                     preparedStatement.executeUpdate();
                 }
             } catch (SQLException e) {

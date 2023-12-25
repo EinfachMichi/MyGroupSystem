@@ -6,7 +6,6 @@ import me.michi.mygroupsystem.logs.GroupLogFlag;
 import me.michi.mygroupsystem.logs.GroupSystemLogType;
 import me.michi.mygroupsystem.logs.GroupSystemLogger;
 import me.michi.mygroupsystem.GroupSystemManager;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -32,7 +31,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
             case "create" -> createGroup(commandSender, specificArgs);
             case "add" -> addPlayerToGroup(commandSender, specificArgs);
             case "info" -> showInfo(commandSender, specificArgs);
-            case "remove" -> removePlayerFromGroup(commandSender, specificArgs);
+            case "remove" -> removePlayerOrGroup(commandSender, specificArgs);
             case "list" -> listAllGroups(commandSender);
             case "help" -> help(commandSender);
             default -> GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_command);
@@ -64,10 +63,15 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
 
     private List<String> tabCompleteSecond(String firstArgument){
         List<String> tabCompleteList = new ArrayList<>();
-        if ("add".equals(firstArgument) || "remove".equals(firstArgument)) {
-            tabCompleteList.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getDisplayName).toList());
-        } else if ("info".equals(firstArgument)) {
-            tabCompleteList.addAll(Arrays.asList(GroupSystemManager.getInstance().getGroupNames()));
+        if ("add".equals(firstArgument) || "remove".equals(firstArgument) || "info".equals(firstArgument)) {
+            GroupMember[] groupMembers = GroupSystemManager.getInstance().getGroupAllGroupMembers();
+            for (GroupMember groupMember : groupMembers){
+                tabCompleteList.add(groupMember.getDisplayName());
+            }
+
+            if("info".equals(firstArgument) || "remove".equals(firstArgument)){
+                tabCompleteList.addAll(Arrays.asList(GroupSystemManager.getInstance().getGroupNames()));
+            }
         }
 
         return tabCompleteList;
@@ -152,9 +156,9 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
 
         String playerName = args[0];
         String groupName = args[1];
+        GroupMember player = GroupSystemManager.getInstance().getGroupMember(playerName);
 
         // check if given player exists -> if false, log and return
-        Player player = Bukkit.getPlayer(playerName);
         if(player == null){
             GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_found,
                     new GroupLogFlag("{player}", playerName));
@@ -169,7 +173,7 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         }
 
         // check if player is already in that group -> if true, log and return
-        if(GroupSystemManager.getInstance().playerInGroup(groupName, player.getUniqueId())){
+        if(GroupSystemManager.getInstance().playerInGroup(groupName, player.getPlayerUUID())){
             GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_already_in_that_group,
                     new GroupLogFlag("{player}", playerName),
                     new GroupLogFlag("{group}", groupName));
@@ -177,8 +181,8 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         }
 
         // remove player from its current group
-        Group group = GroupSystemManager.getInstance().getGroup(player.getUniqueId());
-        group.removeGroupMember(player.getUniqueId());
+        Group group = GroupSystemManager.getInstance().getGroup(player.getPlayerUUID());
+        group.removeGroupMember(player.getPlayerUUID());
 
         // get the time in seconds
         long seconds = 0;
@@ -193,20 +197,15 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         }
 
         // add player to the new group
-        GroupMember groupMember = GroupSystemManager.getInstance().addPlayerToGroup(
-                player.getUniqueId(), playerName, groupName, seconds
+        GroupMember newMember = GroupSystemManager.getInstance().addPlayerToGroup(
+                player.getPlayerUUID(), playerName, groupName, seconds
         );
-        if(groupMember != null){
+        if(newMember != null){
 
             GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_added_to_group,
                     new GroupLogFlag("{player}", playerName),
                     new GroupLogFlag("{group}", groupName));
-            return;
         }
-
-        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_added_to_group,
-                new GroupLogFlag("{player}", playerName),
-                new GroupLogFlag("{group}", groupName));
     }
 
     /**
@@ -253,14 +252,14 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
         }
 
         String playerOrGroupName = args[0];
-        Player player = Bukkit.getPlayer(playerOrGroupName);
+        GroupMember player = GroupSystemManager.getInstance().getGroupMember(playerOrGroupName);
 
         // check if argument is a player
         if(player != null){
 
             // check if player has a group
-            if(GroupSystemManager.getInstance().playerHasGroup(player.getUniqueId())){
-                Group group = GroupSystemManager.getInstance().getGroup(player.getUniqueId());
+            if(GroupSystemManager.getInstance().playerHasGroup(player.getPlayerUUID())){
+                Group group = GroupSystemManager.getInstance().getGroup(player.getPlayerUUID());
                 GroupSystemLogger.getInstance().showInfo(
                         commandSender,
                         group,
@@ -305,55 +304,65 @@ public class GroupCommand implements CommandExecutor, TabCompleter {
      * /group remove Player 60 <br>
      *      - removes player after a period of time
      */
-    public static void removePlayerFromGroup(CommandSender commandSender, String[] args){
+    public static void removePlayerOrGroup(CommandSender commandSender, String[] args){
         if(args.length == 0 || args.length > 2){
             GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
             return;
         }
 
-        String playerName = args[0];
-        Player player = commandSender.getServer().getPlayer(playerName);
+        String playerOrGroupName = args[0];
+        GroupMember player = GroupSystemManager.getInstance().getGroupMember(playerOrGroupName);
 
-        // check if player exists -> if true, log and return
-        if(player == null){
-            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_found,
-                    new GroupLogFlag("{player}", playerName));
-            return;
-        }
+        // check if argument is a player
+        if(player != null){
 
-        // get time in seconds if it's given
-        long seconds = 0;
-        if(args.length == 2) {
-            String timeInSeconds = args[1];
-            try {
-                seconds = Long.parseLong(timeInSeconds);
-            } catch (Exception e){
-                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
+            // get time in seconds if it's given
+            long seconds = 0;
+            if(args.length == 2) {
+                String timeInSeconds = args[1];
+                try {
+                    seconds = Long.parseLong(timeInSeconds);
+                } catch (Exception e){
+                    GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.invalid_input);
+                    return;
+                }
+            }
+
+            // check if player has a group -> if true, remove it from its group
+            if(GroupSystemManager.getInstance().playerHasGroup(player.getPlayerUUID())){
+                GroupSystemManager.getInstance().removePlayerFromGroup(player.getPlayerUUID(), seconds);
+                if(seconds == 0){
+                    GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group,
+                            new GroupLogFlag("{player}", player.getDisplayName()),
+                            new GroupLogFlag("{group}", player.getGroupName()));
+                    return;
+                }
+                else{
+                    GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group_for_time,
+                            new GroupLogFlag("{player}", player.getDisplayName()),
+                            new GroupLogFlag("{group}", player.getGroupName()),
+                            new GroupLogFlag("{time}", GroupSystemLogger.getTimeString(seconds)));
+                    return;
+                }
+            }
+            else{
+                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_in_group,
+                        new GroupLogFlag("{player}", player.getDisplayName()));
                 return;
             }
         }
-
-        // remove player from its current group
-        String groupName = GroupSystemManager.getInstance().getGroup(player.getUniqueId()).getGroupName();
-        if(GroupSystemManager.getInstance().removePlayerFromGroup(player.getUniqueId(), seconds)){
-            if(seconds == 0){
-                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group,
-                        new GroupLogFlag("{player}", playerName),
-                        new GroupLogFlag("{group}", groupName));
-            }
-            else{
-                GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_removed_from_group_for_time,
-                        new GroupLogFlag("{player}", playerName),
-                        new GroupLogFlag("{group}", groupName),
-                        new GroupLogFlag("{time}", GroupSystemLogger.getTimeString(seconds)));
-            }
+        // check if argument is a group
+        else if(GroupSystemManager.getInstance().groupExists(playerOrGroupName)){
+            Group group = GroupSystemManager.getInstance().getGroup(playerOrGroupName);
+            GroupSystemManager.getInstance().removeGroup(group);
+            GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_removed,
+                    new GroupLogFlag("{group}", playerOrGroupName));
             return;
         }
 
-        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.player_not_removed_from_group,
-                new GroupLogFlag("{player}", playerName),
-                new GroupLogFlag("{group}", groupName)
-        );
+        GroupSystemLogger.getInstance().log(commandSender, GroupSystemLogType.group_or_player_not_found,
+                new GroupLogFlag("{player}", playerOrGroupName),
+                new GroupLogFlag("{group}", playerOrGroupName));
     }
 
     /**

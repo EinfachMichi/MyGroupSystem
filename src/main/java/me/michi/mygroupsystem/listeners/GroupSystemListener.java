@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
@@ -46,12 +47,10 @@ public class GroupSystemListener implements Listener {
         UUID playerUUID = player.getUniqueId();
 
         GroupMember groupMember;
-        GroupSystemManager groupSystemManager = GroupSystemManager.getInstance();
-
-        if (!groupSystemManager.playerHasGroup(playerUUID)) {
-            groupMember = groupSystemManager.addPlayerToGroup(playerUUID, player.getDisplayName(), "Player", 0);
+        if (!GroupSystemManager.getInstance().playerHasGroup(playerUUID)) {
+            groupMember = GroupSystemManager.getInstance().addPlayerToGroup(playerUUID, player.getDisplayName(), "Player", 0);
         } else {
-            groupMember = groupSystemManager.getGroupMember(playerUUID);
+            groupMember = GroupSystemManager.getInstance().getGroupMember(playerUUID);
         }
 
         event.setJoinMessage(null);
@@ -64,5 +63,17 @@ public class GroupSystemListener implements Listener {
         Bukkit.getScheduler().runTaskLater(javaPlugin, () -> {
             GroupSystemLogger.getInstance().trySendLogs(player);
         }, 10);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event){
+        GroupMember groupMember = GroupSystemManager.getInstance().getGroupMember(event.getPlayer().getUniqueId());
+
+        event.setQuitMessage(null);
+
+        String serverJoinedMessage = GroupSystemLogger.getInstance().getLogMessage(GroupSystemLogType.player_joined_the_server);
+        serverJoinedMessage = serverJoinedMessage.replace("{group}", groupMember.getGroupName());
+        serverJoinedMessage = serverJoinedMessage.replace("{player}", groupMember.getDisplayName());
+        Bukkit.broadcastMessage(serverJoinedMessage);
     }
 }

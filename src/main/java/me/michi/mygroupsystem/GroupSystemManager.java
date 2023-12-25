@@ -1,6 +1,9 @@
 package me.michi.mygroupsystem;
 
+import me.michi.mygroupsystem.database.GroupData;
+import me.michi.mygroupsystem.database.GroupMemberData;
 import me.michi.mygroupsystem.database.GroupSystemDataBase;
+import me.michi.mygroupsystem.database.ServerInfo;
 import me.michi.mygroupsystem.logs.GroupLogFlag;
 import me.michi.mygroupsystem.logs.GroupSystemLogType;
 import me.michi.mygroupsystem.logs.GroupSystemLogger;
@@ -24,6 +27,12 @@ public class GroupSystemManager {
             instance = new GroupSystemManager();
         }
         return instance;
+    }
+
+    public void createGroups(List<GroupData> groupDataList) {
+        for (GroupData groupData : groupDataList) {
+            createGroup(groupData.groupName(), groupData.prefix());
+        }
     }
 
     public Group createGroup(String name, String prefix){
@@ -53,11 +62,18 @@ public class GroupSystemManager {
         return newMember;
     }
 
-    public boolean removePlayerFromGroup(UUID playerUUID, long seconds){
-        if(!playerHasGroup(playerUUID)){
-            return false;
+    public void addGroupMembers(List<GroupMemberData> groupMemberDataList) {
+        for (GroupMemberData groupMemberData : groupMemberDataList) {
+            addPlayerToGroup(
+                    groupMemberData.playerUUID(),
+                    groupMemberData.displayName(),
+                    groupMemberData.groupName(),
+                    groupMemberData.seconds()
+            );
         }
+    }
 
+    public void removePlayerFromGroup(UUID playerUUID, long seconds){
         Group group = getGroup(playerUUID);
         GroupMember groupMember = getGroupMember(playerUUID);
 
@@ -71,7 +87,42 @@ public class GroupSystemManager {
         }
 
         GroupSystemDataBase.uploadGroupMember(groupMember);
-        return true;
+    }
+
+    public void removeGroup(Group group){
+        if(group.getGroupName().equals("Player")){
+            return;
+        }
+
+        GroupMember[] groupMembers = getGroupMembers(group.getGroupName());
+        for (GroupMember groupMember : groupMembers){
+            addPlayerToGroup(groupMember.getPlayerUUID(), groupMember.getDisplayName(), "Player", 0);
+        }
+        groups.remove(group);
+        GroupSystemDataBase.deleteGroupEntry(group);
+    }
+
+    public void manageServerInfo(ServerInfo serverInfo){
+        GroupMember[] groupMembers = getGroupAllGroupMembers();
+        for (GroupMember groupMember : groupMembers){
+            if(groupMember.getRemainingSeconds() > 0){
+                long timePassed = System.currentTimeMillis() - serverInfo.lastTimeOnline();
+                timePassed /= 1000;
+                if(groupMember.getRemainingSeconds() - timePassed < 0){
+                    GroupSystemLogger.getInstance().addLogToQueue(
+                            groupMember.getPlayerUUID(),
+                            GroupSystemLogType.you_got_removed_from_group,
+                            new GroupLogFlag("{group}", groupMember.getGroupName())
+                    );
+                    removePlayerFromGroup(groupMember.getPlayerUUID(), 0);
+                    expirationTimes.remove(groupMember);
+                }
+                else{
+                    groupMember.setTime(groupMember.getRemainingSeconds() - timePassed);
+                    assignGroupMemberWithExpirationTime(groupMember);
+                }
+            }
+        }
     }
 
     public boolean groupExists(String groupName){
@@ -100,6 +151,29 @@ public class GroupSystemManager {
                 .findFirst()
                 .map(group -> group.getGroupMember(playerUUID))
                 .orElse(null);
+    }
+
+    public GroupMember getGroupMember(String displayName){
+        return groups.stream()
+                .filter(group -> group.containsGroupMember(displayName))
+                .findFirst()
+                .map(group -> group.getGroupMember(displayName))
+                .orElse(null);
+    }
+
+    public GroupMember[] getGroupAllGroupMembers() {
+        return groups.stream()
+                .flatMap(group -> group.getGroupMembers().stream())
+                .toArray(GroupMember[]::new);
+    }
+
+    public GroupMember[] getGroupMembers(String groupName) {
+        return groups.stream()
+                .filter(group -> group.getGroupName().equals(groupName))
+                .findFirst()
+                .map(Group::getGroupMembers)
+                .orElse(Collections.emptyList())
+                .toArray(GroupMember[]::new);
     }
 
     public Group getGroup(UUID playerUUID){

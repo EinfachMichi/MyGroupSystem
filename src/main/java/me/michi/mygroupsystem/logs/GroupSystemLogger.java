@@ -198,10 +198,10 @@ public class GroupSystemLogger {
 
         StringBuilder result = new StringBuilder("(");
 
-        appendTimeComponent(result, days, "day");
-        appendTimeComponent(result, hours, "hour");
-        appendTimeComponent(result, minutes, "minute");
-        appendTimeComponent(result, remainingSeconds, "second");
+        appendTimeComponent(result, days, " day");
+        appendTimeComponent(result, hours, " hour");
+        appendTimeComponent(result, minutes, " minute");
+        appendTimeComponent(result, remainingSeconds, " second");
 
         result.append(")");
 
@@ -210,11 +210,10 @@ public class GroupSystemLogger {
 
     private static void appendTimeComponent(StringBuilder result, long value, String unit) {
         if (value > 0) {
-            result.append(value).append(" ").append(unit);
+            result.append(value).append(unit);
             if (value > 1) {
                 result.append("s");
             }
-            result.append(" ");
         }
     }
 }
