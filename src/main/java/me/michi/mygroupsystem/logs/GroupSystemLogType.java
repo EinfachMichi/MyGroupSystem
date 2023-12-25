@@ -17,5 +17,6 @@ public enum GroupSystemLogType {
     player_removed_from_group_for_time,
     you_got_removed_from_group,
     player_joined_the_server,
+    player_left_the_server,
     group_removed
 }
