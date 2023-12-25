@@ -64,10 +64,10 @@ logs:
     message: "§cYou got removed from §6[{group}]§c. You are now in group §6[Player]§c."
 
   - type: player_joined_the_server
-    message: "§f[§6{group}§f] {player} §ajoined the server."
+    message: "§f[§6{group}§f] {player}§a joined the server."
 
   - type: player_left_the_server
-    message: "§f[§6{group}§f] {player} §left the server."
+    message: "§f[§6{group}§f] {player}§a left the server."
 
   - type: group_removed
     message: "§6[{group}]§a removed. All of its members are now in group §6[Player]§a."
