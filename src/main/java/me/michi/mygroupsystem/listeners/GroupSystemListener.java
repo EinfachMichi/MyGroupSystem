@@ -71,7 +71,7 @@ public class GroupSystemListener implements Listener {
 
         event.setQuitMessage(null);
 
-        String serverJoinedMessage = GroupSystemLogger.getInstance().getLogMessage(GroupSystemLogType.player_joined_the_server);
+        String serverJoinedMessage = GroupSystemLogger.getInstance().getLogMessage(GroupSystemLogType.player_left_the_server);
         serverJoinedMessage = serverJoinedMessage.replace("{group}", groupMember.getGroupName());
         serverJoinedMessage = serverJoinedMessage.replace("{player}", groupMember.getDisplayName());
         Bukkit.broadcastMessage(serverJoinedMessage);
